@@ -39,3 +39,35 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude and AI documentation
+.claude/
+claude/
+CLAUDE.md
+ai_docs/
+AI_DOCS/
+
+# Specification and documentation files
+spec/
+specs/
+documentation/
+docs/
+*.spec.md
+*.spec.txt
+*_spec.*
+
+# AI and development notes
+*.ai.md
+*.ai.txt
+AI_*.md
+ai-*.md
+*_prompt.*
+*_notes.md
+DATABASE_OPTIMIZATION_SUMMARY.md
+
+# Temporary and backup files
+*.tmp
+*.bak
+*.backup
+*~
+.#*
