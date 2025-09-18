@@ -76,44 +76,17 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // Webpack optimizations
-  webpack: (config, { dev }) => {
-    // Production optimizations
-    if (!dev) {
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          chunks: 'all',
-          cacheGroups: {
-            vendor: {
-              test: /[\\/]node_modules[\\/]/,
-              name: 'vendors',
-              chunks: 'all',
-            },
-            common: {
-              name: 'common',
-              minChunks: 2,
-              chunks: 'all',
-              enforce: true,
-            },
-          },
-        },
-      };
-    }
-
-    // Bundle analyzer (uncomment to analyze bundle size)
-    // if (!dev && !isServer) {
-    //   const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
-    //   config.plugins.push(
-    //     new BundleAnalyzerPlugin({
-    //       analyzerMode: 'static',
-    //       openAnalyzer: false,
-    //     })
-    //   );
-    // }
-
-    return config;
-  },
+  // Turbopack configuration
+  // Turbopack handles optimization automatically, so we don't need webpack configs
+  // Your app is using --turbopack flag in package.json, so webpack config is not needed
+  
+  // Note: Webpack configuration removed to eliminate warning
+  // Turbopack provides automatic optimizations including:
+  // - Code splitting
+  // - Tree shaking
+  // - Minification
+  // - Bundle optimization
+  // No manual configuration needed!
 
   // Redirects for SEO
   async redirects() {

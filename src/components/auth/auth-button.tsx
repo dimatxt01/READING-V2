@@ -29,7 +29,7 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
           email,
           password,
           options: {
-            emailRedirectTo: 'http://localhost:3000/auth/callback',
+            emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback`,
           },
         })
 
