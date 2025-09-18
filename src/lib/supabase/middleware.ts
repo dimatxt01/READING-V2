@@ -89,10 +89,15 @@ export async function updateSession(request: NextRequest) {
             request,
           })
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, {
+              ...options,
+              sameSite: 'none',
+              secure: true,
+              domain: '.coolifyai.com'  // Allow across subdomains
+            })
           )
         },
-      },
+      }
     }
   )
 
