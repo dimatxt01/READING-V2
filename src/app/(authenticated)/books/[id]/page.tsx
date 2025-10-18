@@ -43,6 +43,13 @@ interface BookStats {
   }
 }
 
+interface UserProgress {
+  pagesRead: number
+  timeSpent: number
+  sessionsCount: number
+  avgSpeed: number
+}
+
 interface Review {
   id: string
   rating: number
@@ -74,6 +81,7 @@ export default function BookDetailPage() {
   
   const [book, setBook] = useState<BookDetails | null>(null)
   const [stats, setStats] = useState<BookStats | null>(null)
+  const [userProgress, setUserProgress] = useState<UserProgress | null>(null)
   const [reviews, setReviews] = useState<Review[]>([])
   const [recentSessions, setRecentSessions] = useState<ReadingSession[]>([])
   const [userReview, setUserReview] = useState<Review | null>(null)
@@ -114,38 +122,49 @@ export default function BookDetailPage() {
 
       if (sessionsError) throw sessionsError
 
-      // Fetch user profiles for all unique user IDs in sessions, but only for users with activity visibility enabled
-      let userProfiles: Record<string, { full_name?: string; avatar_url?: string }> = {}
+      // Fetch user profiles for all unique user IDs in sessions
+      // All users are always shown - no privacy filtering
+      let userProfiles: Record<string, { full_name?: string; avatar_url?: string; showInActivity?: boolean }> = {}
       if (sessions && sessions.length > 0) {
         const userIds = [...new Set(sessions.map(s => s.user_id))]
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, full_name, avatar_url, privacy_settings')
+          .select('id, full_name, avatar_url')
           .in('id', userIds)
-        
+
         if (profiles) {
           userProfiles = profiles.reduce((acc, profile) => {
-            // Check if user has activity visibility enabled
-            const privacySettings = profile.privacy_settings as Record<string, unknown>
-            const activitySettings = privacySettings?.activity as Record<string, unknown>
-            const showReadingHistory = activitySettings?.showReadingHistory ?? true
-            
-            if (showReadingHistory) {
-              acc[profile.id] = {
-                full_name: profile.full_name ?? "",
-                avatar_url: profile.avatar_url ?? ""
-              }
+            acc[profile.id] = {
+              full_name: profile.full_name ?? "",
+              avatar_url: profile.avatar_url ?? "",
+              showInActivity: true  // Always show all users
             }
             return acc
-          }, {} as Record<string, { full_name?: string; avatar_url?: string }>)
+          }, {} as Record<string, { full_name?: string; avatar_url?: string; showInActivity?: boolean }>)
         }
       }
 
-      // Check if current user has read this book
+      // Check if current user has read this book and calculate their progress
       const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const userSessions = sessions?.filter(s => s.user_id === user.id) || []
+      if (user && sessions) {
+        const userSessions = sessions.filter(s => s.user_id === user.id)
         setHasReadBook(userSessions.length > 0)
+
+        // Calculate user's personalized progress for this book
+        if (userSessions.length > 0) {
+          const userPagesRead = userSessions.reduce((sum, s) => sum + s.pages_read, 0)
+          const userTimeSpent = userSessions.reduce((sum, s) => sum + s.time_spent, 0)
+          const userAvgSpeed = userTimeSpent > 0 ? (userPagesRead / userTimeSpent) * 60 : 0
+
+          setUserProgress({
+            pagesRead: userPagesRead,
+            timeSpent: userTimeSpent,
+            sessionsCount: userSessions.length,
+            avgSpeed: Math.round(userAvgSpeed)
+          })
+        } else {
+          setUserProgress(null)
+        }
       }
 
       // Calculate statistics
@@ -202,7 +221,7 @@ export default function BookDetailPage() {
 
         // Set recent sessions - only show sessions from users with activity visibility enabled
         setRecentSessions(sessions
-          .filter(s => userProfiles[s.user_id]) // Only include users with visible profiles
+          .filter(s => userProfiles[s.user_id]?.showInActivity) // Only include users with visible profiles
           .slice(-10)
           .reverse()
           .map(s => ({
@@ -533,9 +552,39 @@ export default function BookDetailPage() {
                     </Card>
                   )}
 
+                  {userProgress && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-sm font-medium">My Progress</CardTitle>
+                        <CardDescription>Your personal reading stats for this book</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Pages Read</span>
+                            <span className="font-medium">{userProgress.pagesRead}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>Time Spent</span>
+                            <span className="font-medium">{Math.round(userProgress.timeSpent / 60)} hours {userProgress.timeSpent % 60} min</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>Reading Sessions</span>
+                            <span className="font-medium">{userProgress.sessionsCount}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>Your Avg Speed</span>
+                            <span className="font-medium">{userProgress.avgSpeed} p/h</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-sm font-medium">Total Progress</CardTitle>
+                      <CardTitle className="text-sm font-medium">Community Total</CardTitle>
+                      <CardDescription>Combined stats from all readers</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">

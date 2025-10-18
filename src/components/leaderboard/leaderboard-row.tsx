@@ -61,19 +61,13 @@ export function LeaderboardRow({
   }
 
   const getDisplayName = () => {
-    const privacySettings = entry.privacy_settings as Record<string, unknown> | null
-    const leaderboardSettings = privacySettings?.leaderboard as Record<string, unknown> | null
-    
-    if (leaderboardSettings?.useRealName && entry.full_name) {
-      return entry.full_name
-    }
-    return entry.display_name || 'Anonymous Reader'
+    // Always show full name if available, otherwise display name
+    return entry.full_name || entry.display_name || 'Reader'
   }
 
   const shouldShowAvatar = () => {
-    const privacySettings = entry.privacy_settings as Record<string, unknown> | null
-    const profileSettings = privacySettings?.profile as Record<string, unknown> | null
-    return profileSettings?.showAvatar !== false
+    // Always show avatar
+    return true
   }
 
   const formatTime = (minutes: number) => {

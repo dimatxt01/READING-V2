@@ -40,7 +40,7 @@ export default function BooksPage() {
         .from('books')
         .select(`
           *,
-          reading_submissions!inner(id, user_id),
+          reading_submissions(id, user_id),
           book_reviews(rating)
         `)
         .eq('status', 'approved')

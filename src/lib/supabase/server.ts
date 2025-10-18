@@ -1,8 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { cache } from 'react'
 import { Database } from '../types/database'
 
-export async function createClient() {
+// Use React cache to deduplicate Supabase client requests per render
+export const createClient = cache(async () => {
   const cookieStore = await cookies()
 
   return createServerClient<Database>(
@@ -16,11 +18,12 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
+              const isProduction = process.env.NODE_ENV === 'production'
               cookieStore.set(name, value, {
                 ...options,
-                sameSite: 'none',
-                secure: true,
-                domain: '.coolifyai.com'
+                sameSite: isProduction ? 'none' : 'lax',
+                secure: isProduction,
+                ...(isProduction && { domain: '.coolifyai.com' })
               })
             })
           } catch {
@@ -32,4 +35,4 @@ export async function createClient() {
       }
     }
   )
-}
+})

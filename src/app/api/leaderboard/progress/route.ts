@@ -119,18 +119,22 @@ export async function POST(request: NextRequest) {
     const usersData = limitedUserIds.map((userId: string) => {
       const profile = profiles?.find(p => p.id === userId)
       const ranking = sortedUsers.find(u => u.userId === userId)
-      
+
       return {
         userId,
         userName: profile?.full_name || 'Anonymous',
         avatarUrl: profile?.avatar_url || null,
-        rank: ranking?.rank || 999,
+        rank: ranking?.rank || null,  // null instead of 999 for unranked users
         totalPages: ranking?.totalPages || 0
       }
-    }).sort((a: { userId: string; rank: number }, b: { userId: string; rank: number }) => {
+    }).sort((a: { userId: string; rank: number | null }, b: { userId: string; rank: number | null }) => {
       // Sort by: current user first, then by rank
       if (a.userId === user.id) return -1
       if (b.userId === user.id) return 1
+      // Handle null ranks (unranked users go to the end)
+      if (a.rank === null && b.rank === null) return 0
+      if (a.rank === null) return 1
+      if (b.rank === null) return -1
       return a.rank - b.rank
     })
 

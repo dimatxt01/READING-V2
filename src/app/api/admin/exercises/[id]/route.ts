@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminServerClient } from '@/lib/supabase/admin-server'
-import type { Exercise } from '@/lib/types/database-extensions'
 
 // GET /api/admin/exercises/[id] - Get single exercise
 export async function GET(
@@ -74,38 +73,52 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    
+
     // Build update object with only valid fields
-    const updateData: Partial<Exercise> = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateData: any = {
       updated_at: new Date().toISOString()
     }
-    
+
     // Add fields from body if they exist
-    if (body.title) updateData.title = body.title
-    if (body.description) updateData.description = body.description
-    if (body.type) updateData.type = body.type
-    if (body.difficulty) updateData.difficulty = body.difficulty
-    if (body.tags) updateData.tags = body.tags
+    if (body.title !== undefined) updateData.title = body.title
+    if (body.description !== undefined) updateData.description = body.description
+    if (body.type !== undefined) updateData.type = body.type
+    if (body.difficulty !== undefined) updateData.difficulty = body.difficulty
+    if (body.tags !== undefined) updateData.tags = body.tags
     if (body.is_active !== undefined) updateData.is_active = body.is_active
     if (body.requires_subscription !== undefined) updateData.requires_subscription = body.requires_subscription
-    if (body.min_subscription_tier) updateData.min_subscription_tier = body.min_subscription_tier
-    if (body.instructions) updateData.instructions = body.instructions
-    if (body.config) updateData.config = body.config
+    if (body.min_subscription_tier !== undefined) updateData.min_subscription_tier = body.min_subscription_tier
+
+    // Handle instructions - it should be stored as a string (JSON string)
+    if (body.instructions !== undefined) {
+      updateData.instructions = typeof body.instructions === 'object'
+        ? JSON.stringify(body.instructions)
+        : body.instructions
+    }
+
+    // Handle config - it's stored as JSONB in the database
+    if (body.config !== undefined) {
+      updateData.config = body.config
+    }
     
-    // Update exercise  
+    // Update exercise
     const adminClient = await createAdminServerClient()
     const { data, error } = await (adminClient
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .from('exercises') as any)
       .update(updateData)
       .eq('id', id)
-      .select()
+      .select('*')  // Explicitly select all fields
       .single()
 
     if (error) {
       console.error('Error updating exercise:', error)
       return NextResponse.json({ error: 'Failed to update exercise' }, { status: 500 })
     }
+
+    // Log the update for debugging
+    console.log('Exercise updated:', { id, is_active: data.is_active })
 
     // Log admin action
     try {

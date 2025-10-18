@@ -29,18 +29,28 @@ interface BookSearchProps {
   className?: string
 }
 
-export function BookSearch({ 
-  onSelect, 
-  allowCreate = true, 
+export function BookSearch({
+  onSelect,
+  allowCreate = true,
   selectedBook,
-  className 
+  className
 }: BookSearchProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Book[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
   const supabase = createClient()
+
+  // Get current user ID
+  useEffect(() => {
+    const getUserId = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUserId(user?.id || null)
+    }
+    getUserId()
+  }, [supabase])
 
   const debouncedSearch = useMemo(
     () => debounce(async (searchQuery: string) => {
@@ -48,17 +58,22 @@ export function BookSearch({
         setResults([])
         return
       }
-      
+
       setIsSearching(true)
       try {
+        // Get current user for filtering pending books
+        const { data: { user } } = await supabase.auth.getUser()
+
+        // Search for approved books OR pending books created by current user
         const { data, error } = await supabase
           .from('books')
           .select('*')
           .or(`title.ilike.%${searchQuery}%,author.ilike.%${searchQuery}%`)
-          .eq('status', 'approved')
+          .or(user ? `status.eq.approved,and(status.eq.pending,created_by.eq.${user.id})` : 'status.eq.approved')
+          .order('status', { ascending: false }) // approved first, then pending
           .order('title')
           .limit(10)
-        
+
         if (error) {
           console.error('Error searching books:', error)
           setResults([])
@@ -132,7 +147,14 @@ export function BookSearch({
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <p className="font-medium truncate">{selectedBook.title}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-medium truncate">{selectedBook.title}</p>
+              {selectedBook.status === 'pending' && (
+                <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 shrink-0">
+                  Pending Approval
+                </Badge>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground truncate">by {selectedBook.author}</p>
             {selectedBook.total_pages && (
               <Badge variant="secondary" className="mt-1">
@@ -200,7 +222,14 @@ export function BookSearch({
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{book.title}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium truncate">{book.title}</p>
+                        {book.status === 'pending' && (
+                          <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 shrink-0">
+                            Pending Approval
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground truncate">{book.author}</p>
                       <div className="flex items-center gap-2 mt-1">
                         {book.total_pages && (

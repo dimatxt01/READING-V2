@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { Database } from '../types/database'
+import { logger } from '../utils/logger'
 
 // Import security utilities (fallback to no-op if not available)
 interface RateLimitResult {
@@ -47,9 +48,14 @@ export async function updateSession(request: NextRequest) {
   if (pathname.startsWith('/api/')) {
     const rateLimitResult = await rateLimiters.api.isAllowed(request)
     if (!rateLimitResult.allowed) {
-      logSecurityEvent('rate_limit', request, { 
+      logger.warn('Rate limit exceeded', {
+        path: pathname,
         limit: rateLimitResult.limit,
-        current: rateLimitResult.current 
+        current: rateLimitResult.current
+      })
+      logSecurityEvent('rate_limit', request, {
+        limit: rateLimitResult.limit,
+        current: rateLimitResult.current
       })
       
       return new NextResponse(
@@ -84,6 +90,7 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
+          const isProduction = process.env.NODE_ENV === 'production'
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({
             request,
@@ -91,15 +98,30 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, {
               ...options,
-              sameSite: 'none',
-              secure: true,
-              domain: '.coolifyai.com'  // Allow across subdomains
+              sameSite: isProduction ? 'none' : 'lax',
+              secure: isProduction,
+              ...(isProduction && { domain: '.coolifyai.com' })
             })
           )
         },
       }
     }
   )
+
+  // Handle auth code/token parameters - redirect to callback if present
+  const code = request.nextUrl.searchParams.get('code')
+  const token = request.nextUrl.searchParams.get('token')
+  const token_hash = request.nextUrl.searchParams.get('token_hash')
+
+  if ((code || token || token_hash) && !pathname.startsWith('/auth/callback')) {
+    // Preserve all query parameters and redirect to callback
+    const callbackUrl = new URL('/auth/callback', request.url)
+    request.nextUrl.searchParams.forEach((value, key) => {
+      callbackUrl.searchParams.set(key, value)
+    })
+    logger.debug('Redirecting to auth callback', { from: pathname })
+    return NextResponse.redirect(callbackUrl)
+  }
 
   // IMPORTANT: Avoid writing any logic between createServerClient and
   // supabase.auth.getUser(). A simple mistake could make it very hard to debug
@@ -110,12 +132,15 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   // Debug logging
-  console.log(`Middleware: ${request.nextUrl.pathname}, User: ${user ? 'authenticated' : 'not authenticated'}`)
+  logger.debug('Middleware processing request', {
+    pathname: request.nextUrl.pathname,
+    authenticated: !!user
+  })
 
   // Admin route protection
   if (request.nextUrl.pathname.startsWith('/admin')) {
     if (!user) {
-      console.log('Redirecting unauthenticated user from admin to login')
+      logger.info('Redirecting unauthenticated admin access', { pathname })
       return NextResponse.redirect(new URL('/auth/login', request.url))
     }
 
@@ -128,7 +153,7 @@ export async function updateSession(request: NextRequest) {
         .single()
 
       if (error || profile?.role !== 'admin') {
-        console.log('Redirecting non-admin user from admin area')
+        logger.warn('Non-admin attempted admin access', { userId: user.id, pathname })
         return NextResponse.redirect(new URL('/dashboard?error=unauthorized', request.url))
       }
 
@@ -149,25 +174,26 @@ export async function updateSession(request: NextRequest) {
         })
       } catch {
         // Ignore logging errors (table might not exist yet)
-        console.debug('Admin activity logging not available')
+        logger.debug('Admin activity logging not available')
       }
 
-      console.log(`Admin access granted to ${request.nextUrl.pathname}`)
+      logger.debug('Admin access granted', { pathname: request.nextUrl.pathname })
     } catch (error) {
-      console.error('Error checking admin role:', error)
+      logger.error('Error checking admin role', error)
       return NextResponse.redirect(new URL('/dashboard?error=access_denied', request.url))
     }
   }
 
   // If user is signed in and the current path is /login or root, redirect the user to /dashboard
+  // Allow /auth/verify-otp for users who just authenticated
   if (user && (request.nextUrl.pathname === '/auth/login' || request.nextUrl.pathname === '/')) {
-    console.log('Redirecting authenticated user to dashboard')
+    logger.debug('Redirecting authenticated user to dashboard')
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
   // If user is not signed in and the current path is not an auth route or root, redirect to login
   if (!user && !request.nextUrl.pathname.startsWith('/auth') && request.nextUrl.pathname !== '/') {
-    console.log('Redirecting unauthenticated user to login')
+    logger.debug('Redirecting unauthenticated user to login')
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 

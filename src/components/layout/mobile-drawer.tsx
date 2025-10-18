@@ -7,14 +7,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { SignOutButton } from '@/components/auth/auth-button'
 import { getInitials } from '@/lib/utils/formatting'
-import { 
+import {
   Menu,
   X,
-  LayoutDashboard, 
-  BookOpen, 
-  Dumbbell, 
-  ClipboardCheck, 
-  Trophy, 
+  LayoutDashboard,
+  BookOpen,
+  // Dumbbell, // Disabled per request
+  ClipboardCheck,
+  Trophy,
   Upload,
   User,
   Settings,
@@ -42,7 +42,7 @@ const navigationItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/submit', label: 'Submit Reading', icon: Upload },
   { href: '/books', label: 'Books', icon: BookOpen },
-  { href: '/exercises', label: 'Exercises', icon: Dumbbell },
+  // { href: '/exercises', label: 'Exercises', icon: Dumbbell }, // Disabled per request
   { href: '/assessments', label: 'Assessments', icon: ClipboardCheck },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { href: '/subscription', label: 'Subscription', icon: Crown },

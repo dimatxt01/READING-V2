@@ -189,13 +189,13 @@ function mapSubscriptionFields(data: any): any { // eslint-disable-line @typescr
   const fieldMap: Record<string, string> = {
     // Reading limits
     'monthly_reading_limit': 'max_submissions_per_month',
-    
-    // Feature flags - direct mapping
+
+    // Permission settings - direct mapping
     'can_see_leaderboard': 'can_see_leaderboard',
     'can_join_leaderboard': 'can_join_leaderboard',
     'can_see_book_stats': 'can_see_book_stats',
     'can_export_data': 'can_export_data',
-    
+
     // JSONB fields - direct mapping
     'visible_user_stats': 'visible_user_stats',
     'visible_book_stats': 'visible_book_stats'

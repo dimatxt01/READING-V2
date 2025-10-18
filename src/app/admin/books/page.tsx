@@ -75,7 +75,10 @@ export default function AdminBooksPage() {
   const [approvedBooks, setApprovedBooks] = useState<Book[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
   const [currentUser, setCurrentUser] = useState<{id: string; role: string} | null>(null)
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'merged'>('pending')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalBooks, setTotalBooks] = useState(0)
+  const itemsPerPage = 20
   
   const router = useRouter()
   const { toast } = useToast()
@@ -86,7 +89,7 @@ export default function AdminBooksPage() {
     fetchBooks()
     fetchApprovedBooks()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, searchQuery])
+  }, [searchQuery, currentPage])
 
   const checkAdminAccess = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -120,26 +123,56 @@ export default function AdminBooksPage() {
   const fetchBooks = async () => {
     setLoading(true)
     try {
+      // First, get the count for pagination
+      let countQuery = supabase
+        .from('books')
+        .select('*', { count: 'exact', head: true })
+
+      if (searchQuery) {
+        countQuery = countQuery.or(`title.ilike.%${searchQuery}%,author.ilike.%${searchQuery}%`)
+      }
+
+      const { count, error: countError } = await countQuery
+
+      if (countError) throw countError
+
+      setTotalBooks(count || 0)
+      setTotalPages(Math.ceil((count || 0) / itemsPerPage))
+
+      // Now fetch the actual data
       let query = supabase
         .from('books')
         .select(`
           *,
           creator:profiles!books_created_by_fkey(full_name)
         `)
+        // Sort to show pending first, then by created_at
+        .order('status', { ascending: true })
         .order('created_at', { ascending: false })
-
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter)
-      }
 
       if (searchQuery) {
         query = query.or(`title.ilike.%${searchQuery}%,author.ilike.%${searchQuery}%`)
       }
 
+      // Add pagination
+      const from = (currentPage - 1) * itemsPerPage
+      const to = from + itemsPerPage - 1
+      query = query.range(from, to)
+
       const { data, error } = await query
 
       if (error) throw error
-      setBooks((data || []).map(book => ({
+
+      // Sort data client-side to ensure pending books are first
+      const sortedData = (data || []).sort((a, b) => {
+        if (a.status === 'pending' && b.status !== 'pending') return -1
+        if (a.status !== 'pending' && b.status === 'pending') return 1
+        const aDate = a.created_at ? new Date(a.created_at).getTime() : 0
+        const bDate = b.created_at ? new Date(b.created_at).getTime() : 0
+        return bDate - aDate
+      })
+
+      setBooks(sortedData.map(book => ({
         ...book,
         isbn: book.isbn ?? undefined,
         cover_url: book.cover_url ?? undefined,
@@ -331,7 +364,7 @@ export default function AdminBooksPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="secondary">Pending</Badge>
+        return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200">Pending Approval</Badge>
       case 'approved':
         return <Badge className="bg-green-500">Approved</Badge>
       case 'rejected':
@@ -367,33 +400,25 @@ export default function AdminBooksPage() {
 
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Filters</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>All Books ({totalBooks} total)</CardTitle>
+            <div className="text-sm text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Search by title or author..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'all' | 'pending' | 'approved' | 'rejected' | 'merged')}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Books</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-                <SelectItem value="merged">Merged</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search by title or author..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setCurrentPage(1) // Reset to first page on new search
+              }}
+              className="pl-10"
+            />
           </div>
         </CardContent>
       </Card>
@@ -428,7 +453,10 @@ export default function AdminBooksPage() {
             </TableHeader>
             <TableBody>
               {books.map((book) => (
-                <TableRow key={book.id}>
+                <TableRow
+                  key={book.id}
+                  className={book.status === 'pending' ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''}
+                >
                   <TableCell>
                     <div className="w-12 h-16 relative bg-muted rounded">
                       {book.cover_url ? (
@@ -506,6 +534,63 @@ export default function AdminBooksPage() {
               ))}
             </TableBody>
           </Table>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                Showing {((currentPage - 1) * itemsPerPage) + 1} to{' '}
+                {Math.min(currentPage * itemsPerPage, totalBooks)} of {totalBooks} books
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+
+                {/* Page number buttons */}
+                <div className="flex gap-1">
+                  {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                    let pageNum
+                    if (totalPages <= 5) {
+                      pageNum = i + 1
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i
+                    } else {
+                      pageNum = currentPage - 2 + i
+                    }
+
+                    return (
+                      <Button
+                        key={i}
+                        variant={pageNum === currentPage ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className="w-10"
+                      >
+                        {pageNum}
+                      </Button>
+                    )
+                  })}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </Card>
       )}
 

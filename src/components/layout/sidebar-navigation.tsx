@@ -8,7 +8,6 @@ import { getInitials } from '@/lib/utils/formatting'
 import { 
   LayoutDashboard, 
   BookOpen, 
-  Dumbbell, 
   ClipboardCheck, 
   Trophy, 
   Upload,
@@ -38,7 +37,7 @@ const navigationItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/submit', label: 'Submit Reading', icon: Upload },
   { href: '/books', label: 'Books', icon: BookOpen },
-  { href: '/exercises', label: 'Exercises', icon: Dumbbell },
+  // { href: '/exercises', label: 'Exercises', icon: Dumbbell }, // Disabled per request
   { href: '/assessments', label: 'Assessments', icon: ClipboardCheck },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { href: '/subscription', label: 'Subscription', icon: Crown },

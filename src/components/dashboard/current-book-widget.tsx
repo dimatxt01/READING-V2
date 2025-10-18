@@ -19,6 +19,7 @@ interface CurrentBookWidgetProps {
     currentPage: number
     lastReadDate?: Date
     averagePace?: number // pages per day
+    status?: 'pending' | 'approved' | 'merged' | 'rejected'
   }
 }
 
@@ -111,9 +112,16 @@ export function CurrentBookWidget({ currentBook }: CurrentBookWidgetProps) {
           
           <div className="flex-1 space-y-3">
             <div>
-              <h3 className="font-semibold line-clamp-1" title={currentBook.title}>
-                {currentBook.title}
-              </h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-semibold line-clamp-1" title={currentBook.title}>
+                  {currentBook.title}
+                </h3>
+                {currentBook.status === 'pending' && (
+                  <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 shrink-0">
+                    Pending Approval
+                  </Badge>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground line-clamp-1">
                 by {currentBook.author}
               </p>

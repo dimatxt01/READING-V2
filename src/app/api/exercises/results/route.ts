@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
       .from('exercise_results')
       .select(`
         *,
-        exercises (
+        exercise:exercises!exercise_id (
+          id,
           title,
           type,
           difficulty
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
       .eq('user_id', user.id)
 
     if (exerciseType) {
-      query = query.eq('exercises.type', exerciseType)
+      query = query.eq('exercise.type', exerciseType)
     }
 
     const { data: results, error } = await query

@@ -5,26 +5,19 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Users, 
-  BookOpen, 
-  Activity, 
-  TrendingUp, 
+import {
+  Users,
+  BookOpen,
   AlertTriangle,
   CheckCircle,
   Clock,
   BarChart3,
-  Settings,
   Plus
 } from 'lucide-react'
 import Link from 'next/link'
 
 interface DashboardStats {
-  totalUsers: number
-  totalBooks: number
   pendingBooks: number
-  totalSubmissions: number
-  activeUsers: number
   systemHealth: 'healthy' | 'warning' | 'error'
 }
 
@@ -37,11 +30,7 @@ interface RecentActivity {
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats>({
-    totalUsers: 0,
-    totalBooks: 0,
     pendingBooks: 0,
-    totalSubmissions: 0,
-    activeUsers: 0,
     systemHealth: 'healthy'
   })
   const [loading, setLoading] = useState(true)
@@ -57,34 +46,14 @@ export default function AdminDashboard() {
   const fetchDashboardData = async () => {
     setLoading(true)
     try {
-      // Fetch stats in parallel
-      const [
-        usersResult,
-        booksResult,
-        pendingBooksResult,
-        submissionsResult
-      ] = await Promise.all([
-        supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('books').select('*', { count: 'exact', head: true }),
-        supabase.from('books').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('reading_submissions').select('*', { count: 'exact', head: true })
-      ])
-
-      // Calculate active users (users who submitted in last 7 days)
-      const sevenDaysAgo = new Date()
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-      
-      const { count: activeUsersCount } = await supabase
-        .from('reading_submissions')
-        .select('user_id', { count: 'exact', head: true })
-        .gte('created_at', sevenDaysAgo.toISOString())
+      // Fetch pending books count
+      const { count: pendingBooksCount } = await supabase
+        .from('books')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending')
 
       setStats({
-        totalUsers: usersResult.count || 0,
-        totalBooks: booksResult.count || 0,
-        pendingBooks: pendingBooksResult.count || 0,
-        totalSubmissions: submissionsResult.count || 0,
-        activeUsers: activeUsersCount || 0,
+        pendingBooks: pendingBooksCount || 0,
         systemHealth: 'healthy'
       })
 
@@ -128,13 +97,6 @@ export default function AdminDashboard() {
       variant: 'outline'
     },
     {
-      title: 'Feature Flags',
-      description: 'Configure app features',
-      href: '/admin/features',
-      icon: Settings,
-      variant: 'outline'
-    },
-    {
       title: 'Analytics',
       description: 'View detailed analytics',
       href: '/admin/analytics',
@@ -160,61 +122,6 @@ export default function AdminDashboard() {
             Quick Add
           </Button>
         </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{loading ? '...' : stats.totalUsers.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.activeUsers} active this week
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Books</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{loading ? '...' : stats.totalBooks.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.pendingBooks} pending approval
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Reading Sessions</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{loading ? '...' : stats.totalSubmissions.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              All time submissions
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">System Health</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">-</div>
-            <p className="text-xs text-muted-foreground">
-              System monitoring needed
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -286,13 +193,6 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               ))}
-            </div>
-            <div className="mt-4">
-              <Link href="/admin/tools/activity">
-                <Button variant="outline" size="sm" className="w-full">
-                  View All Activity
-                </Button>
-              </Link>
             </div>
           </CardContent>
         </Card>

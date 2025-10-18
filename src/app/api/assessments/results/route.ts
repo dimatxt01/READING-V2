@@ -1,5 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminServerClient } from '@/lib/supabase/admin-server'
+import { createClient } from '@/lib/supabase/server'
+
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const limit = parseInt(searchParams.get('limit') || '10')
+
+    // Get user's recent assessment results
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: results, error } = await (supabase as any)
+      .from('assessment_results')
+      .select(`
+        *,
+        assessment_texts!inner(
+          title
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (error) {
+      console.error('Error fetching assessment results:', error)
+      return NextResponse.json({ error: 'Failed to fetch results' }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: results || []
+    })
+
+  } catch (error) {
+    console.error('Error in GET /api/assessments/results:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {

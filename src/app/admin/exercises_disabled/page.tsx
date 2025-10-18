@@ -9,11 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { useToast } from '@/components/ui/use-toast'
 import { 
-  Plus, 
   Edit, 
   Trash2, 
   Dumbbell, 
@@ -49,7 +48,6 @@ export default function ExerciseManagementPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterType, setFilterType] = useState<string>('all')
   const [filterDifficulty, setFilterDifficulty] = useState<string>('all')
-  const [showInactive, setShowInactive] = useState(false)
   
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
@@ -75,8 +73,9 @@ export default function ExerciseManagementPage() {
     setLoading(true)
     try {
       const params = new URLSearchParams()
-      if (showInactive) params.append('includeInactive', 'true')
-      
+      // Always include inactive exercises
+      params.append('includeInactive', 'true')
+
       const response = await fetch(`/api/admin/exercises?${params}`)
       if (!response.ok) throw new Error('Failed to fetch exercises')
       
@@ -92,7 +91,7 @@ export default function ExerciseManagementPage() {
     } finally {
       setLoading(false)
     }
-  }, [showInactive, toast])
+  }, [toast])
 
   useEffect(() => {
     fetchExercises()
@@ -100,31 +99,63 @@ export default function ExerciseManagementPage() {
 
   const handleCreate = async () => {
     try {
+      // Try to parse instructions and config
+      let instructionsData = null
+      let configData = {}
+
+      if (formData.instructions) {
+        try {
+          instructionsData = JSON.parse(formData.instructions)
+        } catch {
+          // If it's not valid JSON, treat it as a string
+          instructionsData = formData.instructions
+        }
+      }
+
+      if (formData.config) {
+        try {
+          configData = JSON.parse(formData.config)
+        } catch {
+          console.error('Invalid config JSON, using empty object')
+        }
+      }
+
       const response = await fetch('/api/admin/exercises', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          ...formData,
+          title: formData.title,
+          type: formData.type,
+          difficulty: formData.difficulty,
+          description: formData.description,
           tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
-          instructions: formData.instructions ? JSON.parse(formData.instructions) : null,
-          config: formData.config ? JSON.parse(formData.config) : {}
+          requires_subscription: formData.requires_subscription,
+          min_subscription_tier: formData.min_subscription_tier,
+          instructions: instructionsData,
+          config: configData,
+          is_active: formData.is_active
         })
       })
 
-      if (!response.ok) throw new Error('Failed to create exercise')
+      if (!response.ok) {
+        const error = await response.text()
+        console.error('Create error:', error)
+        throw new Error('Failed to create exercise')
+      }
 
-      const result = await response.json()
-      
+      await response.json()
+
       toast({
         title: 'Success',
         description: 'Exercise created successfully'
       })
 
-      setExercises(prev => [result.data, ...prev])
       setCreateDialogOpen(false)
       resetForm()
+      // Refresh the entire exercises list
+      await fetchExercises()
     } catch (error) {
       console.error('Error creating exercise:', error)
       toast({
@@ -139,33 +170,64 @@ export default function ExerciseManagementPage() {
     if (!editingExercise) return
 
     try {
+      // Try to parse instructions and config
+      let instructionsData = null
+      let configData = {}
+
+      if (formData.instructions) {
+        try {
+          instructionsData = JSON.parse(formData.instructions)
+        } catch {
+          // If it's not valid JSON, treat it as a string
+          instructionsData = formData.instructions
+        }
+      }
+
+      if (formData.config) {
+        try {
+          configData = JSON.parse(formData.config)
+        } catch {
+          console.error('Invalid config JSON, using empty object')
+        }
+      }
+
       const response = await fetch(`/api/admin/exercises/${editingExercise.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          ...formData,
+          title: formData.title,
+          type: formData.type,
+          difficulty: formData.difficulty,
+          description: formData.description,
           tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
-          instructions: formData.instructions ? JSON.parse(formData.instructions) : null,
-          config: formData.config ? JSON.parse(formData.config) : {}
+          requires_subscription: formData.requires_subscription,
+          min_subscription_tier: formData.min_subscription_tier,
+          instructions: instructionsData,
+          config: configData,
+          is_active: formData.is_active
         })
       })
 
-      if (!response.ok) throw new Error('Failed to update exercise')
+      if (!response.ok) {
+        const error = await response.text()
+        console.error('Update error:', error)
+        throw new Error('Failed to update exercise')
+      }
 
       const result = await response.json()
-      
+      console.log('Updated exercise data:', result.data)
+
       toast({
         title: 'Success',
         description: 'Exercise updated successfully'
       })
 
-      setExercises(prev => prev.map(ex => 
-        ex.id === editingExercise.id ? result.data : ex
-      ))
       setEditingExercise(null)
       resetForm()
+      // Refresh the entire exercises list
+      await fetchExercises()
     } catch (error) {
       console.error('Error updating exercise:', error)
       toast({
@@ -178,18 +240,25 @@ export default function ExerciseManagementPage() {
 
   const handleDelete = async (id: string) => {
     try {
+      console.log('Deleting exercise:', id)
+
       const response = await fetch(`/api/admin/exercises/${id}`, {
         method: 'DELETE'
       })
 
-      if (!response.ok) throw new Error('Failed to delete exercise')
+      if (!response.ok) {
+        const error = await response.text()
+        console.error('Delete error:', error)
+        throw new Error('Failed to delete exercise')
+      }
 
       toast({
         title: 'Success',
         description: 'Exercise deleted successfully'
       })
 
-      setExercises(prev => prev.filter(ex => ex.id !== id))
+      // Refresh the entire exercises list
+      await fetchExercises()
     } catch (error) {
       console.error('Error deleting exercise:', error)
       toast({
@@ -202,6 +271,8 @@ export default function ExerciseManagementPage() {
 
   const handleToggleActive = async (exercise: Exercise) => {
     try {
+      console.log('Toggling exercise:', exercise.id, 'Current status:', exercise.is_active)
+
       const response = await fetch(`/api/admin/exercises/${exercise.id}`, {
         method: 'PATCH',
         headers: {
@@ -212,18 +283,22 @@ export default function ExerciseManagementPage() {
         })
       })
 
-      if (!response.ok) throw new Error('Failed to toggle exercise status')
+      if (!response.ok) {
+        const errorData = await response.text()
+        console.error('Response error:', errorData)
+        throw new Error('Failed to toggle exercise status')
+      }
 
       const result = await response.json()
-      
+      console.log('Updated exercise:', result.data)
+
       toast({
         title: 'Success',
         description: `Exercise ${result.data.is_active ? 'activated' : 'deactivated'} successfully`
       })
 
-      setExercises(prev => prev.map(ex => 
-        ex.id === exercise.id ? result.data : ex
-      ))
+      // Refresh the exercises list to ensure we have the latest data
+      await fetchExercises()
     } catch (error) {
       console.error('Error toggling exercise status:', error)
       toast({
@@ -250,18 +325,40 @@ export default function ExerciseManagementPage() {
   }
 
   const openEditDialog = (exercise: Exercise) => {
+    console.log('Opening edit dialog for exercise:', exercise)
     setEditingExercise(exercise)
+
+    // Handle instructions field - it might be a string or an object
+    let instructionsStr = ''
+    if (exercise.instructions) {
+      if (typeof exercise.instructions === 'string') {
+        instructionsStr = exercise.instructions
+      } else {
+        instructionsStr = JSON.stringify(exercise.instructions, null, 2)
+      }
+    }
+
+    // Handle config field similarly
+    let configStr = ''
+    if (exercise.config) {
+      if (typeof exercise.config === 'string') {
+        configStr = exercise.config
+      } else {
+        configStr = JSON.stringify(exercise.config, null, 2)
+      }
+    }
+
     setFormData({
-      title: exercise.title,
-      type: exercise.type,
-      difficulty: exercise.difficulty,
-      description: exercise.description,
-      tags: exercise.tags.join(', '),
-      requires_subscription: exercise.requires_subscription,
-      min_subscription_tier: exercise.min_subscription_tier,
-      instructions: exercise.instructions ? JSON.stringify(exercise.instructions, null, 2) : '',
-      config: exercise.config ? JSON.stringify(exercise.config, null, 2) : '',
-      is_active: exercise.is_active
+      title: exercise.title || '',
+      type: exercise.type || '',
+      difficulty: exercise.difficulty || 'beginner',
+      description: exercise.description || '',
+      tags: exercise.tags ? exercise.tags.join(', ') : '',
+      requires_subscription: exercise.requires_subscription || false,
+      min_subscription_tier: exercise.min_subscription_tier || 'free',
+      instructions: instructionsStr,
+      config: configStr,
+      is_active: exercise.is_active !== false
     })
   }
 
@@ -314,13 +411,8 @@ export default function ExerciseManagementPage() {
             Refresh
           </Button>
 
+          {/* Add Exercise button removed - exercises should only be added by admin via database */}
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Add Exercise
-              </Button>
-            </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New Exercise</DialogTitle>
@@ -523,16 +615,7 @@ export default function ExerciseManagementPage() {
               </Select>
             </div>
 
-            <div className="flex items-end">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="show-inactive"
-                  checked={showInactive}
-                  onCheckedChange={setShowInactive}
-                />
-                <Label htmlFor="show-inactive">Show Inactive</Label>
-              </div>
-            </div>
+            {/* Show Inactive toggle removed - all exercises including inactive are now visible by default */}
           </div>
         </CardContent>
       </Card>
@@ -540,7 +623,7 @@ export default function ExerciseManagementPage() {
       {/* Exercise List */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filteredExercises.map(exercise => (
-          <Card key={exercise.id} className={`relative ${!exercise.is_active ? 'opacity-60' : ''}`}>
+          <Card key={exercise.id} className={`relative ${!exercise.is_active ? 'opacity-50 bg-muted/50 border-dashed' : ''}`}>
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -605,7 +688,7 @@ export default function ExerciseManagementPage() {
                   </Badge>
                 )}
                 
-                <Badge variant={exercise.is_active ? 'default' : 'secondary'}>
+                <Badge variant={exercise.is_active ? 'default' : 'destructive'}>
                   {exercise.is_active ? (
                     <CheckCircle className="h-3 w-3 mr-1" />
                   ) : (

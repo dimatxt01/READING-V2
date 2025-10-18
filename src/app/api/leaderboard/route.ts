@@ -3,20 +3,23 @@ import { NextResponse } from 'next/server'
 
 interface LeaderboardRequest {
   timeRange: 'daily' | 'weekly' | 'monthly'
-  limit?: number
+  limit?: number | 'all'
 }
 
 export async function POST(request: Request) {
   try {
     const { timeRange, limit = 10 } = await request.json() as LeaderboardRequest
-    
+
     const supabase = await createClient()
-    
+
     // Get current user
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Convert 'all' to -1 for the RPC function (returns all when limit <= 0)
+    const limitCount = limit === 'all' ? -1 : (typeof limit === 'number' ? limit : 10)
 
     // Calculate date range
     const now = new Date()
@@ -44,7 +47,7 @@ export async function POST(request: Request) {
       .rpc('get_leaderboard_with_privacy', {
         start_date: startDate.toISOString(),
         end_date: now.toISOString(),
-        limit_count: limit
+        limit_count: limitCount
       })
 
     if (leaderboardError) {
@@ -52,31 +55,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to fetch leaderboard' }, { status: 500 })
     }
 
-    // Get current user's rank if they're participating
-    const { data: userProfile } = await supabase
-      .from('profiles')
-      .select('subscription_tier, privacy_settings')
-      .eq('id', user.id)
-      .single()
-
+    // Get current user's rank - NO PRIVACY CHECKS, ALL USERS INCLUDED
     let userRank = null
-    
-    const privacySettings = userProfile?.privacy_settings as Record<string, unknown> | null
-    const leaderboardSettings = privacySettings?.leaderboard as Record<string, unknown> | null
-    
-    if (userProfile?.subscription_tier !== 'free' && 
-        leaderboardSettings?.showOnLeaderboard !== false) {
-      
-      const { data: userRankData, error: userRankError } = await (supabase as unknown as { rpc: (name: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }> })
-        .rpc('get_user_leaderboard_rank', {
-          target_user_id: user.id,
-          start_date: startDate.toISOString(),
-          end_date: now.toISOString()
-        })
 
-      if (!userRankError && userRankData && Array.isArray(userRankData) && userRankData.length > 0) {
-        userRank = userRankData[0]  // Get the first (and only) object from the array
-      }
+    const { data: userRankData, error: userRankError } = await (supabase as unknown as { rpc: (name: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }> })
+      .rpc('get_user_leaderboard_rank', {
+        target_user_id: user.id,
+        start_date: startDate.toISOString(),
+        end_date: now.toISOString()
+      })
+
+    if (!userRankError && userRankData && Array.isArray(userRankData) && userRankData.length > 0) {
+      userRank = userRankData[0]  // Get the first (and only) object from the array
     }
 
     return NextResponse.json({

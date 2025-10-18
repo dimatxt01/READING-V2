@@ -1,12 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Crown, Check, Zap } from 'lucide-react'
+// import { Badge } from '@/components/ui/badge'
+// import { Button } from '@/components/ui/button'
+import { Crown } from 'lucide-react'
 
 export default async function SubscriptionPage() {
   const supabase = await createClient()
-  
+
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -14,6 +14,8 @@ export default async function SubscriptionPage() {
   if (!user) {
     return null
   }
+
+  /* COMMENTED OUT - SUBSCRIPTION SYSTEM COMING SOON
 
   // Get user profile with subscription info
   const { data: profile } = await supabase
@@ -74,17 +76,50 @@ export default async function SubscriptionPage() {
       current: currentPlan === 'pro'
     }
   ]
+  */
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Subscription</h1>
         <p className="mt-2 text-gray-600">
-          Choose the plan that&apos;s right for your reading journey
+          Premium features and subscription plans
         </p>
       </div>
 
-      {/* Current Plan Status */}
+      {/* Coming Soon Message */}
+      <Card className="border-2 border-dashed">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-center justify-center">
+            <Crown className="h-6 w-6 text-amber-500" />
+            Coming Soon
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-12 space-y-4">
+            <div className="mx-auto w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center">
+              <Crown className="h-8 w-8 text-amber-600" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                Subscription Plans Coming Soon
+              </h3>
+              <p className="text-gray-600 max-w-md mx-auto">
+                We&apos;re working on exciting premium features and subscription options.
+                Stay tuned for updates!
+              </p>
+            </div>
+            <div className="pt-4">
+              <p className="text-sm text-gray-500">
+                Currently, all features are available to everyone for free.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* COMMENTED OUT - All subscription UI
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -109,7 +144,7 @@ export default async function SubscriptionPage() {
                 {currentPlan === 'pro' && 'Pro'}
               </Badge>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
               <div>
                 <p className="text-sm text-gray-600">Status</p>
@@ -128,25 +163,25 @@ export default async function SubscriptionPage() {
                   )}
                 </p>
               </div>
-              
+
               <div>
                 <p className="text-sm text-gray-600">Member Since</p>
                 <p className="font-medium">
-                  {memberSince.toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'long' 
+                  {memberSince.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long'
                   })}
                 </p>
               </div>
-              
+
               <div>
                 <p className="text-sm text-gray-600">
                   {currentPlan === 'free' ? 'Submissions Used' : 'Next Billing'}
                 </p>
                 <p className="font-medium">
-                  {currentPlan === 'free' 
+                  {currentPlan === 'free'
                     ? `${profile?.total_pages_read || 0} pages read`
-                    : subscriptionStatus === 'active' 
+                    : subscriptionStatus === 'active'
                       ? 'Next month'
                       : 'N/A'
                   }
@@ -157,7 +192,6 @@ export default async function SubscriptionPage() {
         </CardContent>
       </Card>
 
-      {/* Pricing Plans */}
       <div className="grid md:grid-cols-3 gap-8">
         {plans.map((plan) => (
           <Card key={plan.tier} className={`relative ${plan.popular ? 'ring-2 ring-emerald-500' : ''}`}>
@@ -169,7 +203,7 @@ export default async function SubscriptionPage() {
                 </Badge>
               </div>
             )}
-            
+
             <CardHeader className="text-center">
               <CardTitle className="text-xl">{plan.name}</CardTitle>
               <div className="mt-4">
@@ -178,7 +212,7 @@ export default async function SubscriptionPage() {
               </div>
               <p className="text-sm text-gray-600 mt-2">{plan.description}</p>
             </CardHeader>
-            
+
             <CardContent className="space-y-4">
               <ul className="space-y-3">
                 {plan.features.map((feature, index) => (
@@ -188,9 +222,9 @@ export default async function SubscriptionPage() {
                   </li>
                 ))}
               </ul>
-              
-              <Button 
-                className="w-full mt-6" 
+
+              <Button
+                className="w-full mt-6"
                 variant={plan.current ? 'outline' : 'default'}
                 disabled={plan.current}
               >
@@ -201,7 +235,6 @@ export default async function SubscriptionPage() {
         ))}
       </div>
 
-      {/* Add-ons */}
       <Card>
         <CardHeader>
           <CardTitle>Add-ons</CardTitle>
@@ -221,6 +254,7 @@ export default async function SubscriptionPage() {
           </div>
         </CardContent>
       </Card>
+      */}
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { Json } from './database'
 
 // Exercise Types
-export type ExerciseType = 'word_flasher' | 'three_two_one' | 'mindset' | 'assessment' | 'custom'
+export type ExerciseType = 'word_flasher' | '3-2-1' | 'mindset' | 'assessment' | 'custom'
 
 export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced'
 

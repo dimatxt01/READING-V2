@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/lib/types/database'
@@ -18,21 +18,8 @@ export function SupabaseProvider({
 }) {
   const [supabase] = useState(() => createClient())
 
-  useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN') {
-        window.location.reload()
-      } else if (event === 'SIGNED_OUT') {
-        window.location.reload()
-      }
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [supabase])
+  // Auth state changes are handled by middleware
+  // No need for client-side listener that wastes resources
 
   return (
     <Context.Provider value={{ supabase }}>

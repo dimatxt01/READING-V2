@@ -26,19 +26,19 @@ interface LeaderboardEntry {
 interface LeaderboardProps {
   userId: string
   userProfile: Record<string, unknown> | null
-  canParticipate: boolean
 }
 
 type TimeRange = 'daily' | 'weekly' | 'monthly'
 type ViewMode = 'rankings' | 'chart'
 
-export function Leaderboard({ userId, canParticipate }: LeaderboardProps) {
+export function Leaderboard({ userId }: LeaderboardProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>('weekly')
   const [viewMode, setViewMode] = useState<ViewMode>('rankings')
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([])
   const [userRank, setUserRank] = useState<LeaderboardEntry | null>(null)
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [showAll, setShowAll] = useState(false)
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -47,11 +47,11 @@ export function Leaderboard({ userId, canParticipate }: LeaderboardProps) {
         const response = await fetch('/api/leaderboard', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ timeRange, limit: 10 })
+          body: JSON.stringify({ timeRange, limit: showAll ? 'all' : 10 })
         })
-        
+
         const data = await response.json()
-        
+
         if (!response.ok) {
           console.error('Error fetching leaderboard:', data.error)
           return
@@ -66,11 +66,11 @@ export function Leaderboard({ userId, canParticipate }: LeaderboardProps) {
         setLoading(false)
       }
     }
-    
+
     fetchLeaderboard()
     const interval = setInterval(fetchLeaderboard, 60000) // Refresh every minute
     return () => clearInterval(interval)
-  }, [timeRange])
+  }, [timeRange, showAll])
 
   const handleRefresh = async () => {
     setLoading(true)
@@ -78,11 +78,11 @@ export function Leaderboard({ userId, canParticipate }: LeaderboardProps) {
       const response = await fetch('/api/leaderboard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ timeRange, limit: 10 })
+        body: JSON.stringify({ timeRange, limit: showAll ? 'all' : 10 })
       })
-      
+
       const data = await response.json()
-      
+
       if (!response.ok) {
         console.error('Error fetching leaderboard:', data.error)
         return
@@ -124,14 +124,14 @@ export function Leaderboard({ userId, canParticipate }: LeaderboardProps) {
   return (
     <div className="space-y-6">
       {/* Main Controls Card */}
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              {React.createElement(getRangeIcon(timeRange), { className: "h-6 w-6 text-emerald-600" })}
+              {React.createElement(getRangeIcon(timeRange), { className: "h-6 w-6 text-primary" })}
               <div>
-                <CardTitle>Leaderboard</CardTitle>
-                <p className="text-sm text-gray-600">{getRangeDescription(timeRange)}</p>
+                <CardTitle className="text-xl">Leaderboard</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">{getRangeDescription(timeRange)}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -140,12 +140,11 @@ export function Leaderboard({ userId, canParticipate }: LeaderboardProps) {
                 size="sm"
                 onClick={handleRefresh}
                 disabled={loading}
-                className="text-gray-600"
               >
                 <RotateCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               </Button>
               {lastUpdated && (
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-muted-foreground">
                   Updated {lastUpdated.toLocaleTimeString()}
                 </span>
               )}
@@ -154,7 +153,7 @@ export function Leaderboard({ userId, canParticipate }: LeaderboardProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Time Range Filter */}
-          <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
+          <div className="flex gap-2 p-1 bg-muted rounded-lg w-full sm:w-auto">
             {(['daily', 'weekly', 'monthly'] as TimeRange[]).map((range) => {
               const Icon = getRangeIcon(range)
               return (
@@ -163,7 +162,7 @@ export function Leaderboard({ userId, canParticipate }: LeaderboardProps) {
                   variant={timeRange === range ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setTimeRange(range)}
-                  className="capitalize flex items-center gap-2"
+                  className="capitalize flex items-center gap-2 flex-1 sm:flex-none"
                 >
                   <Icon className="h-4 w-4" />
                   {range}
@@ -172,39 +171,53 @@ export function Leaderboard({ userId, canParticipate }: LeaderboardProps) {
             })}
           </div>
 
-          {/* View Mode Tabs - Only show if user can participate */}
-          {canParticipate && (
-            <div className="flex gap-1 p-1 bg-muted rounded-lg">
-              <Button
-                variant={viewMode === 'rankings' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('rankings')}
-                className="flex items-center gap-2"
-              >
-                <Trophy className="h-4 w-4" />
-                Rankings
-              </Button>
-              <Button
-                variant={viewMode === 'chart' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('chart')}
-                className="flex items-center gap-2"
-              >
-                <ChartLine className="h-4 w-4" />
-                Progress Chart
-              </Button>
-            </div>
-          )}
+          {/* Show All Toggle */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <span className="text-sm text-muted-foreground font-medium">
+              {showAll ? `Showing all ${leaderboardData.length} users` : `Showing top ${Math.min(10, leaderboardData.length)} users`}
+            </span>
+            <Button
+              variant={showAll ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setShowAll(!showAll)}
+              className="flex items-center gap-2"
+            >
+              <TrendingUp className="h-4 w-4" />
+              {showAll ? 'Show Top 10' : 'Show All Users'}
+            </Button>
+          </div>
+
+          {/* View Mode Tabs */}
+          <div className="flex gap-2 p-1 bg-muted rounded-lg w-full">
+            <Button
+              variant={viewMode === 'rankings' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('rankings')}
+              className="flex items-center gap-2 flex-1"
+            >
+              <Trophy className="h-4 w-4" />
+              Rankings
+            </Button>
+            <Button
+              variant={viewMode === 'chart' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('chart')}
+              className="flex items-center gap-2 flex-1"
+            >
+              <ChartLine className="h-4 w-4" />
+              Progress Chart
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Chart View - Only show if user can participate */}
-      {canParticipate && viewMode === 'chart' && (
-        <MultiUserProgressChart 
+      {/* Chart View */}
+      {viewMode === 'chart' && (
+        <MultiUserProgressChart
           currentUserId={userId}
           topUserIds={topUserIds}
           title="Reading Progress Comparison"
-          description={topUserIds.length > 0 
+          description={topUserIds.length > 0
             ? `Comparing with top ${topUserIds.length} ${timeRange} performers`
             : `Your ${timeRange} reading progress`}
         />
@@ -215,71 +228,71 @@ export function Leaderboard({ userId, canParticipate }: LeaderboardProps) {
         <>
           {/* Top 3 Podium */}
           {leaderboardData.length >= 3 && (
-        <Card>
+        <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle className="text-center">🏆 Top Performers</CardTitle>
+            <CardTitle className="text-center text-2xl">🏆 Top Performers</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-end justify-center gap-4">
+          <CardContent className="py-8">
+            <div className="flex items-end justify-center gap-6 px-4">
               {/* 2nd Place */}
-              <div className="text-center">
-                <div className="bg-gray-100 rounded-lg p-4 mb-2 relative">
-                  <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
-                    <Trophy className="h-6 w-6 text-gray-400" />
+              <div className="text-center flex-1 max-w-[160px]">
+                <div className="bg-muted/50 rounded-xl p-4 mb-2 relative shadow-sm border">
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <Trophy className="h-7 w-7 text-slate-400" />
                   </div>
-                  <Avatar className="h-16 w-16 mx-auto mb-2 mt-2">
+                  <Avatar className="h-16 w-16 mx-auto mb-3 mt-2 ring-2 ring-slate-200">
                     <AvatarImage src={leaderboardData[1]?.avatar_url || ''} />
-                    <AvatarFallback className="bg-gray-200">
+                    <AvatarFallback className="bg-slate-100 text-slate-700 font-semibold">
                       {leaderboardData[1]?.display_name?.substring(0, 2).toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  <p className="font-semibold text-sm">{leaderboardData[1]?.display_name}</p>
-                  <p className="text-xs text-gray-600">{leaderboardData[1]?.total_pages} pages</p>
+                  <p className="font-semibold text-sm truncate">{leaderboardData[1]?.display_name}</p>
+                  <p className="text-xs text-muted-foreground font-medium">{leaderboardData[1]?.total_pages} pages</p>
                 </div>
-                <div className="h-16 bg-gray-300 rounded-t-lg flex items-center justify-center">
-                  <span className="text-white font-bold">2</span>
+                <div className="h-16 bg-gradient-to-t from-slate-400 to-slate-300 rounded-t-xl flex items-center justify-center shadow-md">
+                  <span className="text-white font-bold text-lg">2</span>
                 </div>
               </div>
 
               {/* 1st Place */}
-              <div className="text-center">
-                <div className="bg-amber-50 rounded-lg p-4 mb-2 relative border-2 border-amber-200">
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <Crown className="h-8 w-8 text-amber-500" />
+              <div className="text-center flex-1 max-w-[180px]">
+                <div className="bg-amber-50 rounded-xl p-4 mb-2 relative border-2 border-amber-200 shadow-lg">
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                    <Crown className="h-9 w-9 text-amber-500 drop-shadow-md" />
                   </div>
-                  <Avatar className="h-20 w-20 mx-auto mb-2 mt-3 ring-2 ring-amber-400">
+                  <Avatar className="h-20 w-20 mx-auto mb-3 mt-3 ring-4 ring-amber-300 shadow-md">
                     <AvatarImage src={leaderboardData[0]?.avatar_url || ''} />
-                    <AvatarFallback className="bg-amber-100 text-amber-800">
+                    <AvatarFallback className="bg-amber-100 text-amber-800 font-bold text-lg">
                       {leaderboardData[0]?.display_name?.substring(0, 2).toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  <p className="font-bold">{leaderboardData[0]?.display_name}</p>
-                  <p className="text-sm text-amber-700">{leaderboardData[0]?.total_pages} pages</p>
-                  <Badge className="bg-amber-500 text-white text-xs mt-1">
+                  <p className="font-bold truncate">{leaderboardData[0]?.display_name}</p>
+                  <p className="text-sm text-amber-700 font-semibold">{leaderboardData[0]?.total_pages} pages</p>
+                  <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs mt-2 shadow-sm">
                     Champion
                   </Badge>
                 </div>
-                <div className="h-20 bg-amber-400 rounded-t-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">1</span>
+                <div className="h-24 bg-gradient-to-t from-amber-500 to-amber-400 rounded-t-xl flex items-center justify-center shadow-lg">
+                  <span className="text-white font-bold text-2xl">1</span>
                 </div>
               </div>
 
               {/* 3rd Place */}
-              <div className="text-center">
-                <div className="bg-amber-50 rounded-lg p-4 mb-2 relative">
-                  <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
-                    <Medal className="h-6 w-6 text-amber-600" />
+              <div className="text-center flex-1 max-w-[160px]">
+                <div className="bg-orange-50 rounded-xl p-4 mb-2 relative shadow-sm border border-orange-200">
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <Medal className="h-7 w-7 text-orange-500" />
                   </div>
-                  <Avatar className="h-16 w-16 mx-auto mb-2 mt-2">
+                  <Avatar className="h-16 w-16 mx-auto mb-3 mt-2 ring-2 ring-orange-200">
                     <AvatarImage src={leaderboardData[2]?.avatar_url || ''} />
-                    <AvatarFallback className="bg-amber-100">
+                    <AvatarFallback className="bg-orange-100 text-orange-700 font-semibold">
                       {leaderboardData[2]?.display_name?.substring(0, 2).toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  <p className="font-semibold text-sm">{leaderboardData[2]?.display_name}</p>
-                  <p className="text-xs text-gray-600">{leaderboardData[2]?.total_pages} pages</p>
+                  <p className="font-semibold text-sm truncate">{leaderboardData[2]?.display_name}</p>
+                  <p className="text-xs text-muted-foreground font-medium">{leaderboardData[2]?.total_pages} pages</p>
                 </div>
-                <div className="h-12 bg-amber-600 rounded-t-lg flex items-center justify-center">
+                <div className="h-12 bg-gradient-to-t from-orange-500 to-orange-400 rounded-t-xl flex items-center justify-center shadow-md">
                   <span className="text-white font-bold">3</span>
                 </div>
               </div>
@@ -289,28 +302,28 @@ export function Leaderboard({ userId, canParticipate }: LeaderboardProps) {
       )}
 
       {/* Full Leaderboard */}
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle>Rankings</CardTitle>
+          <CardTitle className="text-xl">Rankings</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="space-y-3">
               {[...Array(10)].map((_, i) => (
                 <div key={i} className="animate-pulse flex items-center space-x-4">
-                  <div className="rounded-full bg-gray-200 h-10 w-10"></div>
+                  <div className="rounded-full bg-muted h-12 w-12"></div>
                   <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                    <div className="h-4 bg-muted rounded w-1/4"></div>
+                    <div className="h-3 bg-muted rounded w-1/2"></div>
                   </div>
                 </div>
               ))}
             </div>
           ) : leaderboardData.length === 0 ? (
             <div className="text-center py-12">
-              <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-600 mb-2">No Data Yet</h3>
-              <p className="text-gray-500">
+              <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Data Yet</h3>
+              <p className="text-muted-foreground">
                 Be the first to submit reading progress for this time period!
               </p>
             </div>
@@ -331,10 +344,10 @@ export function Leaderboard({ userId, canParticipate }: LeaderboardProps) {
       </Card>
 
           {/* Current User Rank (if not in top 10) */}
-          {userRank && userRank.rank > 10 && canParticipate && (
-            <Card className="border-emerald-200 bg-emerald-50">
+          {userRank && userRank.rank > 10 && (
+            <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10 shadow-sm">
               <CardHeader>
-                <CardTitle className="text-emerald-800">Your Ranking</CardTitle>
+                <CardTitle className="text-xl text-primary">Your Ranking</CardTitle>
               </CardHeader>
               <CardContent>
                 <LeaderboardRow
@@ -350,29 +363,29 @@ export function Leaderboard({ userId, canParticipate }: LeaderboardProps) {
         </>
       )}
 
-      {/* Stats Summary - Show in both views if user can participate */}
-      {canParticipate && userRank && (
-        <Card>
+      {/* Stats Summary - Show in both views */}
+      {userRank && (
+        <Card className="shadow-sm border-primary/20 bg-gradient-to-br from-background to-primary/5">
           <CardHeader>
-            <CardTitle>Your Performance</CardTitle>
+            <CardTitle className="text-xl">Your Performance</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-emerald-600">{Number(userRank.total_pages) || 0}</div>
-                <div className="text-sm text-gray-600">Pages Read</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="text-center p-4 rounded-lg bg-background/50 border">
+                <div className="text-3xl font-bold text-emerald-600 mb-1">{Number(userRank.total_pages) || 0}</div>
+                <div className="text-sm text-muted-foreground font-medium">Pages Read</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{Math.round(Number(userRank.total_time) / 60) || 0}h</div>
-                <div className="text-sm text-gray-600">Time Spent</div>
+              <div className="text-center p-4 rounded-lg bg-background/50 border">
+                <div className="text-3xl font-bold text-blue-600 mb-1">{Math.round(Number(userRank.total_time) / 60) || 0}h</div>
+                <div className="text-sm text-muted-foreground font-medium">Time Spent</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">{Number(userRank.session_count) || 0}</div>
-                <div className="text-sm text-gray-600">Sessions</div>
+              <div className="text-center p-4 rounded-lg bg-background/50 border">
+                <div className="text-3xl font-bold text-purple-600 mb-1">{Number(userRank.session_count) || 0}</div>
+                <div className="text-sm text-muted-foreground font-medium">Sessions</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">{Math.round(Number(userRank.avg_speed) || 0)}</div>
-                <div className="text-sm text-gray-600">Avg Speed</div>
+              <div className="text-center p-4 rounded-lg bg-background/50 border">
+                <div className="text-3xl font-bold text-orange-600 mb-1">{Math.round(Number(userRank.avg_speed) || 0)}</div>
+                <div className="text-sm text-muted-foreground font-medium">Avg Speed</div>
               </div>
             </div>
           </CardContent>

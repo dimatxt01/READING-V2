@@ -1,12 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { ProfileForm } from '@/components/profile/profile-form'
-import { PrivacySettings } from '@/components/profile/privacy-settings'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
-  
+
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -27,26 +26,20 @@ export default async function ProfilePage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Profile Settings</h1>
         <p className="text-muted-foreground">
-          Manage your profile information and privacy settings.
+          Manage your profile information. All profile data is public.
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="max-w-2xl">
         <Card>
           <CardHeader>
             <CardTitle>Profile Information</CardTitle>
+            <CardDescription>
+              Your profile information is visible to all users on the platform
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ProfileForm profile={profile} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Privacy Settings</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <PrivacySettings profile={profile} />
           </CardContent>
         </Card>
       </div>

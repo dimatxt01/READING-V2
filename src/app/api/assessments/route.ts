@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin-client'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createAdminClient()
+    const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
@@ -11,25 +11,80 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const limit = parseInt(searchParams.get('limit') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const mode = searchParams.get('mode') || 'weighted' // 'weighted' or 'all'
 
-    // Get active assessments
+    // Get all active assessments first
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: assessments, error } = await (supabase as any)
+    const { data: allAssessments, error: assessmentError } = await (supabase as any)
       .from('assessment_texts')
       .select('*')
       .eq('active', true)
-      .limit(limit)
-      .order('created_at', { ascending: false })
 
-    if (error) {
-      console.error('Error fetching assessments:', error)
+    if (assessmentError) {
+      console.error('Error fetching assessments:', assessmentError)
       return NextResponse.json({ error: 'Failed to fetch assessments' }, { status: 500 })
     }
 
+    // Get user's assessment history (count how many times they took each assessment)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: userHistory, error: historyError } = await (supabase as any)
+      .from('assessment_results')
+      .select('assessment_id')
+      .eq('user_id', user.id)
+
+    if (historyError) {
+      console.error('Error fetching user history:', historyError)
+      // Continue without history data
+    }
+
+    // Count how many times user has taken each assessment
+    const assessmentCounts = new Map<string, number>()
+    if (userHistory) {
+      userHistory.forEach((result: { assessment_id: string }) => {
+        const count = assessmentCounts.get(result.assessment_id) || 0
+        assessmentCounts.set(result.assessment_id, count + 1)
+      })
+    }
+
+    // Add user-specific take count to each assessment
+    interface AssessmentWithUserData {
+      id: string
+      user_times_taken: number
+      [key: string]: unknown
+    }
+
+    const assessmentsWithUserData: AssessmentWithUserData[] = allAssessments?.map((assessment: {id: string, [key: string]: unknown}) => ({
+      ...assessment,
+      user_times_taken: assessmentCounts.get(assessment.id) || 0
+    })) || []
+
+    // Sort assessments by priority (less taken = higher priority)
+    if (mode === 'weighted') {
+      assessmentsWithUserData.sort((a: AssessmentWithUserData, b: AssessmentWithUserData) => {
+        // Prioritize assessments the user hasn't taken or taken less
+        if (a.user_times_taken !== b.user_times_taken) {
+          return a.user_times_taken - b.user_times_taken
+        }
+        // For same take count, randomize
+        return Math.random() - 0.5
+      })
+    } else {
+      // Random shuffle for 'all' mode
+      for (let i = assessmentsWithUserData.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [assessmentsWithUserData[i], assessmentsWithUserData[j]] =
+          [assessmentsWithUserData[j], assessmentsWithUserData[i]]
+      }
+    }
+
+    // Apply limit
+    const limitedAssessments = assessmentsWithUserData.slice(0, limit)
+
     return NextResponse.json({
       success: true,
-      data: assessments
+      data: limitedAssessments,
+      total_available: assessmentsWithUserData.length
     })
 
   } catch (error) {
@@ -40,7 +95,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createAdminClient()
+    const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {

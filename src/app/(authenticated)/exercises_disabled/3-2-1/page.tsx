@@ -87,7 +87,7 @@ export default function ThreeTwoOnePage() {
     async function loadExercise() {
       try {
         setLoading(true)
-        const exercises = await ExerciseService.getExercisesByType('three_two_one')
+        const exercises = await ExerciseService.getExercisesByType('3-2-1')
         if (exercises.length > 0) {
           setExercise(exercises[0])
         } else {

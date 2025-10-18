@@ -17,11 +17,9 @@ import {
 } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/use-toast'
 import { createClient } from '@/lib/supabase/client'
-import { 
-  Edit2, 
-  Trash2, 
-  Calendar, 
-  Clock, 
+import {
+  Edit2,
+  Trash2,
   BookOpen,
   Loader2
 } from 'lucide-react'
@@ -216,72 +214,81 @@ export function SubmissionHistory({ userId, onEdit }: SubmissionHistoryProps) {
               <p className="text-muted-foreground">No reading submissions found</p>
             </div>
           ) : (
-            <div className="h-96 overflow-y-auto space-y-4 pr-2">
+            <div className="h-96 overflow-y-auto space-y-3 pr-2">
               {submissions.map((submission) => (
                 <div
                   key={submission.id}
-                  className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                  className="p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
                 >
-                  {submission.book?.cover_url ? (
-                    <Image
-                      src={submission.book.cover_url}
-                      alt={submission.book.title}
-                      width={48}
-                      height={64}
-                      className="w-12 h-16 object-cover rounded"
-                    />
-                  ) : (
-                    <div className="w-12 h-16 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded flex items-center justify-center">
-                      <BookOpen className="h-6 w-6 text-gray-500" />
-                    </div>
-                  )}
-                  
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium truncate">
-                      {submission.book?.title || 'Unknown Book'}
-                    </h4>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {submission.book?.author || 'Unknown Author'}
-                    </p>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {format(parseISO(submission.submission_date), 'MMM d, yyyy')}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <BookOpen className="h-3 w-3" />
-                        {submission.pages_read} pages
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {submission.time_spent} min
-                      </span>
-                      <Badge variant="secondary">
-                        {calculateReadingSpeed(submission.pages_read, submission.time_spent)} p/h
-                      </Badge>
-                    </div>
-                    {submission.notes && (
-                      <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
-                        {submission.notes}
-                      </p>
+                  <div className="flex items-start gap-3">
+                    {submission.book?.cover_url ? (
+                      <Image
+                        src={submission.book.cover_url}
+                        alt={submission.book.title}
+                        width={48}
+                        height={64}
+                        className="w-12 h-16 object-cover rounded flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-12 h-16 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded flex items-center justify-center flex-shrink-0">
+                        <BookOpen className="h-6 w-6 text-gray-500" />
+                      </div>
                     )}
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(submission)}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeletingSubmission(submission)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium truncate">
+                            {submission.book?.title || 'Unknown Book'}
+                          </h4>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {submission.book?.author || 'Unknown Author'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(submission)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeletingSubmission(submission)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                        <span className="text-muted-foreground">
+                          {format(parseISO(submission.submission_date), 'MMM d, yyyy')}
+                        </span>
+                        <span className="text-muted-foreground">•</span>
+                        <span className="font-medium">
+                          {submission.pages_read} pages
+                        </span>
+                        <span className="text-muted-foreground">•</span>
+                        <span className="font-medium">
+                          {submission.time_spent} min
+                        </span>
+                        <span className="text-muted-foreground">•</span>
+                        <Badge variant="secondary" className="text-xs">
+                          {calculateReadingSpeed(submission.pages_read, submission.time_spent)} p/h
+                        </Badge>
+                      </div>
+
+                      {submission.notes && (
+                        <p className="text-sm text-muted-foreground mt-2 line-clamp-1">
+                          {submission.notes}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

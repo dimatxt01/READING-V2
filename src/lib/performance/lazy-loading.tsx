@@ -11,9 +11,9 @@ export const LazyProgressChart = dynamic(
   }
 )
 
-// ThreeTwoOne component not found - using page instead
+// ThreeTwoOne component - exercises currently disabled
 export const LazyThreeTwoOnePage = dynamic(
-  () => import('@/app/(authenticated)/exercises/3-2-1/page'),
+  () => import('@/app/(authenticated)/exercises_disabled/3-2-1/page'),
   {
     loading: () => (
       <div className="flex items-center justify-center h-[400px]">

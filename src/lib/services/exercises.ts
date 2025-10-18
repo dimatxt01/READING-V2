@@ -505,7 +505,7 @@ export const ExerciseUtils = {
     switch (type) {
       case 'word_flasher':
         return 'Word Flasher'
-      case 'three_two_one':
+      case '3-2-1':
         return '3-2-1 Speed Reading'
       case 'mindset':
         return 'Mindset'

@@ -330,13 +330,17 @@ export function MultiUserProgressChart({
                     stroke={user.color}
                     strokeWidth={user.isCurrentUser ? 3 : 2}
                     strokeOpacity={user.isCurrentUser ? 1 : 0.7}
-                    dot={(props: DotProps) => (
-                      <MultiUserAvatarDot 
-                        {...props} 
-                        dataLength={data.length} 
-                        userData={user}
-                      />
-                    )}
+                    dot={(props: DotProps) => {
+                      const { key, ...dotProps } = props
+                      return (
+                        <MultiUserAvatarDot
+                          key={key}
+                          {...dotProps}
+                          dataLength={data.length}
+                          userData={user}
+                        />
+                      )
+                    }}
                     activeDot={{ r: 6 }}
                   />
                 ))}

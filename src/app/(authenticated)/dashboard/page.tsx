@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
 import { StatisticsCards } from '@/components/dashboard/statistics-cards'
 import { CurrentBookWidget } from '@/components/dashboard/current-book-widget'
 import { RecentActivity } from '@/components/dashboard/recent-activity'
@@ -36,13 +35,15 @@ function calculateReadingStreak(submissions: { created_at: string | null }[]): n
 
 export default async function DashboardPage() {
   const supabase = await createClient()
-  
+
+  // Auth check handled by layout - user is guaranteed to exist
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect('/auth/login')
+    // This should never happen due to layout auth, but satisfies TypeScript
+    throw new Error('Unauthorized')
   }
 
   // Get user profile
@@ -92,10 +93,10 @@ export default async function DashboardPage() {
   if (latestSubmission && latestSubmission.book_id) {
     const { data: book } = await supabase
       .from('books')
-      .select('id, title, author, total_pages, cover_url')
+      .select('id, title, author, total_pages, cover_url, status')
       .eq('id', latestSubmission.book_id)
       .single()
-    
+
     if (book && latestSubmission.created_at) {
       // Calculate cumulative pages read for this book
       const { data: allSubmissions } = await supabase
@@ -104,9 +105,9 @@ export default async function DashboardPage() {
         .eq('user_id', user.id)
         .eq('book_id', book.id)
         .order('created_at', { ascending: true })
-      
+
       const totalPagesReadForBook = allSubmissions?.reduce((sum, s) => sum + (s.pages_read || 0), 0) || 0
-      
+
       currentBook = {
         id: book.id,
         title: book.title,
@@ -116,6 +117,7 @@ export default async function DashboardPage() {
         currentPage: totalPagesReadForBook,
         lastReadDate: new Date(latestSubmission.created_at),
         averagePace: latestSubmission.time_spent > 0 ? Math.round((latestSubmission.pages_read / latestSubmission.time_spent) * 60) : 0,
+        status: book.status as 'pending' | 'approved' | 'merged' | 'rejected' | undefined
       }
     }
   }

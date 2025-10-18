@@ -17,6 +17,8 @@
   --input: #ffffff;
   --ring: #059669;
   --radius: 0.5rem;
+  --popover: #ffffff;
+  --popover-foreground: #1f2937;
 }
 
 @theme inline {
@@ -35,6 +37,8 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
   --color-gray-50: #f9fafb;
   --color-gray-100: #f3f4f6;
   --color-gray-200: #e5e7eb;

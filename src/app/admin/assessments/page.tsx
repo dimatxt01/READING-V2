@@ -100,7 +100,8 @@ export default function AssessmentsPage() {
     } finally {
       setLoading(false)
     }
-  }, [toast])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     fetchAssessments()

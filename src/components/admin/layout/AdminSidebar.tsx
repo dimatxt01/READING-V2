@@ -8,18 +8,12 @@ import {
   LayoutDashboard,
   Users,
   BookOpen,
-  Settings,
   BarChart3,
-  Flag,
-  Dumbbell,
   FileText,
   CreditCard,
-  Database,
   ChevronDown,
   ChevronRight,
-  Activity,
   Shield,
-  Palette,
   LogOut,
   Brain,
   Edit3
@@ -58,26 +52,21 @@ const navigationItems: NavItem[] = [
     href: '/admin/books',
     icon: BookOpen,
     children: [
-      { title: 'All Books', href: '/admin/books', icon: BookOpen },
-      { title: 'Pending Approval', href: '/admin/books?status=pending', icon: Shield },
+      { title: 'Manage Books', href: '/admin/books', icon: BookOpen },
       { title: 'Book Texts', href: '/admin/books/texts', icon: FileText }
     ]
   },
-  {
-    title: 'Features',
-    href: '/admin/features',
-    icon: Flag
-  },
-  {
-    title: 'Exercises',
-    href: '/admin/exercises',
-    icon: Dumbbell,
-    children: [
-      { title: 'All Exercises', href: '/admin/exercises', icon: Dumbbell },
-      { title: 'Exercise Texts', href: '/admin/exercises/texts', icon: FileText },
-      { title: 'Word Library', href: '/admin/exercises/word-flasher', icon: Palette }
-    ]
-  },
+  // Exercises disabled per request
+  // {
+  //   title: 'Exercises',
+  //   href: '/admin/exercises',
+  //   icon: Dumbbell,
+  //   children: [
+  //     { title: 'All Exercises', href: '/admin/exercises', icon: Dumbbell },
+  //     { title: 'Exercise Texts', href: '/admin/exercises/texts', icon: FileText },
+  //     { title: 'Word Library', href: '/admin/exercises/word-flasher', icon: Palette }
+  //   ]
+  // },
   {
     title: 'Assessments',
     href: '/admin/assessments',
@@ -94,23 +83,8 @@ const navigationItems: NavItem[] = [
   {
     title: 'Analytics',
     href: '/admin/analytics',
-    icon: BarChart3,
-    children: [
-      { title: 'Overview', href: '/admin/analytics', icon: BarChart3 },
-      { title: 'Users', href: '/admin/analytics/users', icon: Users },
-      { title: 'Reading', href: '/admin/analytics/reading', icon: BookOpen },
-      { title: 'Exercises', href: '/admin/analytics/exercises', icon: Dumbbell }
-    ]
-  },
-  {
-    title: 'Tools',
-    href: '/admin/tools',
-    icon: Database,
-    children: [
-      { title: 'Database', href: '/admin/tools/database', icon: Database },
-      { title: 'System Settings', href: '/admin/settings', icon: Settings },
-      { title: 'Activity Log', href: '/admin/tools/activity', icon: Activity }
-    ]
+    icon: BarChart3
+    // Simplified to just overview page - subdirectories don't exist
   }
 ]
 

@@ -97,15 +97,15 @@ export async function POST(request: NextRequest) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .from('exercises') as any)
       .insert({
-        name: title,
-        slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        title,
         type,
-        difficulty_level: difficulty,
+        difficulty,
         description,
         tags: tags || [],
-        requires_subscription: min_subscription_tier || 'free',
+        requires_subscription: min_subscription_tier !== 'free', // Convert to boolean
+        min_subscription_tier: min_subscription_tier || 'free',
         instructions: instructions || null,
-        settings: config || {},
+        config: config || {},
         is_active: is_active !== false,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()

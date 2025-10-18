@@ -93,46 +93,29 @@ export default function AdminUsersPage() {
   const fetchUsers = async () => {
     setLoading(true)
     try {
-      let query = supabase
-        .from('profiles')
-        .select(`
-          *
-        `, { count: 'exact' })
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString(),
+        search: searchQuery,
+        role: roleFilter,
+        subscription: subscriptionFilter,
+        status: statusFilter,
+        sortBy: sortBy,
+        sortOrder: sortOrder
+      })
 
-      // Apply filters
-      if (searchQuery) {
-        query = query.or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
+      // Fetch from API
+      const response = await fetch(`/api/admin/users?${params}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch users')
       }
 
-      if (roleFilter !== 'all') {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        query = query.eq('role', roleFilter as any)
-      }
-
-      if (subscriptionFilter !== 'all') {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        query = query.eq('subscription_tier', subscriptionFilter as any)
-      }
-
-      if (statusFilter !== 'all') {
-        query = query.eq('is_active', statusFilter === 'active')
-      }
-
-      // Apply sorting
-      query = query.order(sortBy, { ascending: sortOrder === 'asc' })
-
-      // Apply pagination
-      const from = (currentPage - 1) * itemsPerPage
-      const to = from + itemsPerPage - 1
-      query = query.range(from, to)
-
-      const { data, error, count } = await query
-
-      if (error) throw error
+      const data = await response.json()
 
       // Fetch additional stats for each user
       const usersWithStats = await Promise.all(
-        (data || []).map(async (user) => {
+        data.users.map(async (user: User) => {
           // Get submission count
           const { count: submissionCount } = await supabase
             .from('reading_submissions')
@@ -147,10 +130,9 @@ export default function AdminUsersPage() {
         })
       )
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setUsers(usersWithStats as any)
-      setTotalUsers(count || 0)
-      setTotalPages(Math.ceil((count || 0) / itemsPerPage))
+      setUsers(usersWithStats)
+      setTotalUsers(data.total || 0)
+      setTotalPages(Math.ceil(data.total / itemsPerPage))
     } catch (error) {
       console.error('Error fetching users:', error)
       toast({
@@ -165,14 +147,23 @@ export default function AdminUsersPage() {
 
   const handleRoleChange = async (userId: string, newRole: 'reader' | 'admin') => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role: newRole, updated_at: new Date().toISOString() })
-        .eq('id', userId)
+      const response = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId,
+          role: newRole
+        })
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error('Failed to update user role')
+      }
 
-      setUsers(prev => prev.map(user => 
+      // Update local state
+      setUsers(prev => prev.map(user =>
         user.id === userId ? { ...user, role: newRole } : user
       ))
 
@@ -192,14 +183,22 @@ export default function AdminUsersPage() {
 
   const handleSubscriptionChange = async (userId: string, newTier: 'free' | 'reader' | 'pro') => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ subscription_tier: newTier, updated_at: new Date().toISOString() })
-        .eq('id', userId)
+      const response = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId,
+          subscription_tier: newTier
+        })
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error('Failed to update user subscription')
+      }
 
-      setUsers(prev => prev.map(user => 
+      setUsers(prev => prev.map(user =>
         user.id === userId ? { ...user, subscription_tier: newTier } : user
       ))
 
@@ -219,14 +218,22 @@ export default function AdminUsersPage() {
 
   const handleUserStatusToggle = async (userId: string, isActive: boolean) => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_active: isActive, updated_at: new Date().toISOString() })
-        .eq('id', userId)
+      const response = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId,
+          is_active: isActive
+        })
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error('Failed to update user status')
+      }
 
-      setUsers(prev => prev.map(user => 
+      setUsers(prev => prev.map(user =>
         user.id === userId ? { ...user, is_active: isActive } : user
       ))
 

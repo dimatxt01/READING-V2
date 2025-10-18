@@ -36,7 +36,8 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
         if (error) {
           setMessage(error.message)
         } else {
-          setMessage('Check your email for a confirmation link!')
+          // Redirect to OTP verification page
+          window.location.href = `/auth/verify-otp?email=${encodeURIComponent(email)}`
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({

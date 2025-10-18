@@ -4,15 +4,16 @@ import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
-import { createAdminClient } from '@/lib/supabase/admin-client'
-import { 
-  Clock, 
-  TrendingUp, 
-  Award, 
+import { createClient } from '@/lib/supabase/client'
+import {
+  Clock,
+  TrendingUp,
+  Award,
   Loader2,
   ChevronRight,
   Target,
-  History
+  History,
+  RefreshCw
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -40,42 +41,37 @@ export default function AssessmentsPageSimple() {
   const loadUserData = useCallback(async () => {
     try {
       setLoading(true)
-      const adminClient = createAdminClient()
-      const { data: { user } } = await adminClient.auth.getUser()
-      
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+
       if (!user) {
         router.push('/auth/login')
         return
       }
 
-      // Load available assessments
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: assessments, error: assessmentError } = await (adminClient as any)
-        .from('assessment_texts')
-        .select('*')
-        .eq('active', true)
-        .order('created_at', { ascending: false })
-
-      if (!assessmentError && assessments) {
-        setAvailableAssessments(assessments)
+      // Load available assessments via API
+      try {
+        const response = await fetch('/api/assessments?limit=10')
+        if (!response.ok) throw new Error('Failed to fetch assessments')
+        const data = await response.json()
+        if (data.data) {
+          setAvailableAssessments(data.data)
+        }
+      } catch (error) {
+        console.error('Error fetching assessments:', error)
       }
 
-      // Load recent results - use limit to avoid empty result error
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: results, error: resultsError } = await (adminClient as any)
-        .from('assessment_results')
-        .select(`
-          *,
-          assessment_texts!inner(
-            title
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5)
-
-      if (!resultsError && results) {
-        setRecentResults(results)
+      // Load recent results
+      try {
+        const response = await fetch('/api/assessments/results?limit=5')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.data) {
+            setRecentResults(data.data)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching results:', error)
       }
     } catch (error) {
       console.error('Error loading user data:', error)
@@ -104,15 +100,14 @@ export default function AssessmentsPageSimple() {
   const handleTakeAssessment = async () => {
     try {
       setTakingAssessment(true)
-      const adminClient = createAdminClient()
-      const { data: { user } } = await adminClient.auth.getUser()
-      
+      const supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+
       if (!user) {
         router.push('/auth/login')
         return
       }
 
-      // Simple selection: get first available assessment or random one
       if (availableAssessments.length === 0) {
         toast({
           title: 'No Assessments Available',
@@ -122,21 +117,36 @@ export default function AssessmentsPageSimple() {
         return
       }
 
-      // Get assessments user hasn't taken
-      const takenAssessmentIds = new Set(recentResults.map(r => r.assessment_id))
-      const untakenAssessments = availableAssessments.filter(a => !takenAssessmentIds.has(a.id))
-      
-      let selectedAssessment
-      if (untakenAssessments.length > 0) {
-        // Select random untaken assessment
-        selectedAssessment = untakenAssessments[Math.floor(Math.random() * untakenAssessments.length)]
+      // The API now returns assessments in weighted order (less taken ones first)
+      // So we can just pick the first one, which will be the best choice
+      const selectedAssessment = availableAssessments[0]
+
+      // Show which assessment was selected and why
+      const timesTaken = selectedAssessment.user_times_taken || 0
+      if (timesTaken === 0) {
+        toast({
+          title: 'New Assessment Selected',
+          description: `Starting "${selectedAssessment.title}" - You haven't taken this one yet!`,
+          variant: 'default'
+        })
+      } else if (timesTaken === 1) {
+        toast({
+          title: 'Assessment Selected',
+          description: `Starting "${selectedAssessment.title}" - You've taken this once before.`,
+          variant: 'default'
+        })
       } else {
-        // All taken, select random from all
-        selectedAssessment = availableAssessments[Math.floor(Math.random() * availableAssessments.length)]
+        toast({
+          title: 'Assessment Selected',
+          description: `Starting "${selectedAssessment.title}" - You've taken this ${timesTaken} times.`,
+          variant: 'default'
+        })
       }
 
-      // Navigate to assessment
-      router.push(`/assessments/${selectedAssessment.id}`)
+      // Navigate to assessment after a brief delay for toast
+      setTimeout(() => {
+        router.push(`/assessments/${selectedAssessment.id}`)
+      }, 1000)
     } catch (error) {
       console.error('Error starting assessment:', error)
       toast({
@@ -254,12 +264,49 @@ export default function AssessmentsPageSimple() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            Click below to start your next reading assessment. The system will automatically 
-            select the best assessment for you based on your history.
+            The system intelligently selects assessments you haven&apos;t taken yet or taken less frequently.
           </p>
 
-          <Button 
-            size="lg" 
+          {/* Show available assessments preview */}
+          {availableAssessments.length > 0 && (
+            <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium">Available Assessments:</p>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => loadUserData()}
+                  disabled={loading}
+                  className="h-6 px-2"
+                >
+                  <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
+                  <span className="ml-1 text-xs">Refresh</span>
+                </Button>
+              </div>
+              <div className="space-y-1">
+                {availableAssessments.slice(0, 3).map((assessment, index) => (
+                  <div key={assessment.id} className="flex items-center justify-between text-sm">
+                    <span className={index === 0 ? "font-medium" : "text-muted-foreground"}>
+                      {index === 0 && "→ "}{assessment.title}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {assessment.user_times_taken === 0
+                        ? "Never taken"
+                        : `Taken ${assessment.user_times_taken}x`}
+                    </span>
+                  </div>
+                ))}
+                {availableAssessments.length > 3 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    ...and {availableAssessments.length - 3} more
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          <Button
+            size="lg"
             className="w-full md:w-auto"
             onClick={handleTakeAssessment}
             disabled={takingAssessment || availableAssessments.length === 0}
