@@ -92,9 +92,6 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [];
   },
-
-  // Output file tracing for better tree shaking
-  output: 'standalone',
 };
 
 export default nextConfig;

@@ -12,20 +12,21 @@ export const LazyProgressChart = dynamic(
 )
 
 // ThreeTwoOne component - exercises currently disabled
-export const LazyThreeTwoOnePage = dynamic(
-  () => import('@/app/(authenticated)/exercises_disabled/3-2-1/page'),
-  {
-    loading: () => (
-      <div className="flex items-center justify-center h-[400px]">
-        <div className="text-center">
-          <Skeleton className="h-8 w-32 mx-auto mb-4" />
-          <Skeleton className="h-4 w-48 mx-auto" />
-        </div>
-      </div>
-    ),
-    ssr: false
-  }
-)
+// Commented out because exercises_disabled folder was renamed to _exercises_disabled to exclude from build
+// export const LazyThreeTwoOnePage = dynamic(
+//   () => import('@/app/(authenticated)/_exercises_disabled/3-2-1/page'),
+//   {
+//     loading: () => (
+//       <div className="flex items-center justify-center h-[400px]">
+//         <div className="text-center">
+//           <Skeleton className="h-8 w-32 mx-auto mb-4" />
+//           <Skeleton className="h-4 w-48 mx-auto" />
+//         </div>
+//       </div>
+//     ),
+//     ssr: false
+//   }
+// )
 
 export const LazyLeaderboard = dynamic(
   () => import('@/components/leaderboard/leaderboard').then(mod => ({ default: mod.Leaderboard })),
