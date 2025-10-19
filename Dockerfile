@@ -1,4 +1,4 @@
-FROM node:18-alpine AS base
+FROM node:20-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -47,12 +47,12 @@ USER nextjs
 # Expose both ports for flexibility (Coolify uses 80, Next.js defaults to 3000)
 EXPOSE 80 3000
 
-# Use PORT from environment, fallback to 3000
-ENV PORT=${PORT:-3000}
+# Set default port (can be overridden by runtime environment)
+ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Add health check that uses the PORT variable
+# Add health check that uses the PORT variable with IPv4
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 3000) + '/api/health', (r) => {r.statusCode === 200 ? process.exit(0) : process.exit(1)})"
+  CMD node -e "require('http').get('http://127.0.0.1:' + (process.env.PORT || 3000) + '/api/health', (r) => {r.statusCode === 200 ? process.exit(0) : process.exit(1)})"
 
 CMD ["node", "server.js"]
