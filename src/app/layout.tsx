@@ -57,12 +57,13 @@ export const metadata: Metadata = {
     title: "ReadSpeed - Speed Reading Training",
     description: "Master your reading speed with personalized training, assessments, and community challenges",
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#059669" },
     { media: "(prefers-color-scheme: dark)", color: "#059669" },

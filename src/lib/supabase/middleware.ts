@@ -19,27 +19,52 @@ interface RateLimiter {
   isAllowed: (req: NextRequest) => Promise<RateLimitResult>
 }
 
-let rateLimiters: { api: RateLimiter }
-let SecurityHeaders: SecurityModule
-let enforceHTTPS: (req: NextRequest) => NextResponse | null
-let logSecurityEvent: (event: string, req: NextRequest, details?: Record<string, unknown>) => void
+// Cached security modules
+let cachedModules: {
+  rateLimiters: { api: RateLimiter }
+  SecurityHeaders: SecurityModule
+  enforceHTTPS: (req: NextRequest) => NextResponse | null
+  logSecurityEvent: (event: string, req: NextRequest, details?: Record<string, unknown>) => void
+  loaded: boolean
+} | null = null
 
-try {
-  const rateModule = await import('../security/rate-limiting')
-  const headerModule = await import('../security/headers')
-  rateLimiters = rateModule.rateLimiters
-  SecurityHeaders = headerModule.SecurityHeaders
-  enforceHTTPS = headerModule.enforceHTTPS
-  logSecurityEvent = headerModule.logSecurityEvent as (event: string, req: NextRequest, details?: Record<string, unknown>) => void
-} catch {
-  // Fallback implementations
-  rateLimiters = { api: { isAllowed: async () => ({ allowed: true }) } }
-  SecurityHeaders = { getSecurityHeaders: () => ({}) }
-  enforceHTTPS = () => null
-  logSecurityEvent = () => {}
+// Load security modules lazily without top-level await
+async function getSecurityModules() {
+  if (cachedModules && cachedModules.loaded) {
+    return cachedModules
+  }
+
+  try {
+    const [rateModule, headerModule] = await Promise.all([
+      import('../security/rate-limiting'),
+      import('../security/headers')
+    ])
+
+    cachedModules = {
+      rateLimiters: rateModule.rateLimiters,
+      SecurityHeaders: headerModule.SecurityHeaders,
+      enforceHTTPS: headerModule.enforceHTTPS,
+      logSecurityEvent: headerModule.logSecurityEvent as (event: string, req: NextRequest, details?: Record<string, unknown>) => void,
+      loaded: true
+    }
+  } catch {
+    // Fallback implementations if security modules are not available
+    cachedModules = {
+      rateLimiters: { api: { isAllowed: async () => ({ allowed: true }) } },
+      SecurityHeaders: { getSecurityHeaders: () => ({}) },
+      enforceHTTPS: () => null,
+      logSecurityEvent: () => {},
+      loaded: true
+    }
+  }
+
+  return cachedModules
 }
 
 export async function updateSession(request: NextRequest) {
+  // Load security modules lazily
+  const { rateLimiters, SecurityHeaders, enforceHTTPS, logSecurityEvent } = await getSecurityModules()
+
   // Enforce HTTPS in production
   const httpsRedirect = enforceHTTPS(request)
   if (httpsRedirect) return httpsRedirect
@@ -57,7 +82,7 @@ export async function updateSession(request: NextRequest) {
         limit: rateLimitResult.limit,
         current: rateLimitResult.current
       })
-      
+
       return new NextResponse(
         JSON.stringify({
           error: 'Too many requests',

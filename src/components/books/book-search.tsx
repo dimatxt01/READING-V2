@@ -40,17 +40,7 @@ export function BookSearch({
   const [isSearching, setIsSearching] = useState(false)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
-  const [userId, setUserId] = useState<string | null>(null)
   const supabase = createClient()
-
-  // Get current user ID
-  useEffect(() => {
-    const getUserId = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUserId(user?.id || null)
-    }
-    getUserId()
-  }, [supabase])
 
   const debouncedSearch = useMemo(
     () => debounce(async (searchQuery: string) => {

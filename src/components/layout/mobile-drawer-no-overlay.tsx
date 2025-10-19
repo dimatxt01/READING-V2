@@ -48,7 +48,7 @@ const navigationItems = [
   { href: '/subscription', label: 'Subscription', icon: Crown },
 ]
 
-export function MobileDrawer({ user, profile }: MobileDrawerProps) {
+export function MobileDrawerNoOverlay({ user, profile }: MobileDrawerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const pathname = usePathname()
   const isAdmin = profile?.role === 'admin'
@@ -59,7 +59,7 @@ export function MobileDrawer({ user, profile }: MobileDrawerProps) {
   return (
     <>
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 h-16">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-white border-b border-gray-200 h-16">
         <div className="flex items-center justify-between h-full px-4">
           <Button
             variant="ghost"
@@ -67,9 +67,9 @@ export function MobileDrawer({ user, profile }: MobileDrawerProps) {
             onClick={toggleDrawer}
             className="p-2"
           >
-            <Menu className="h-6 w-6" />
+            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </Button>
-          
+
           <Link href="/dashboard" className="flex items-center space-x-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600">
               <BookOpen className="h-5 w-5 text-white" />
@@ -91,60 +91,33 @@ export function MobileDrawer({ user, profile }: MobileDrawerProps) {
         </div>
       </div>
 
-      {/* Optional semi-transparent overlay - now less intrusive */}
-      <div
-        className={`lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm transition-all duration-300 z-40 ${
-          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-        onClick={closeDrawer}
-      />
-
-      {/* Drawer with enhanced shadow and smooth animation */}
-      <div className={`lg:hidden fixed top-0 left-0 h-full w-72 max-w-[75vw] bg-white shadow-2xl transform transition-all duration-300 ease-out z-50 ${
+      {/* Drawer without overlay - slides over content but doesn't block it */}
+      <div className={`lg:hidden fixed top-16 left-0 h-[calc(100vh-4rem)] w-72 max-w-[75vw] bg-white shadow-2xl transform transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] z-40 ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="flex h-full flex-col">
-          {/* Header */}
-          <div className="flex h-16 items-center justify-between border-b border-gray-200 px-6">
-            <Link href="/dashboard" onClick={closeDrawer} className="flex items-center space-x-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600">
-                <BookOpen className="h-5 w-5 text-white" />
-              </div>
-              <h1 className="text-xl font-bold text-gray-900">ReadSpeed</h1>
-            </Link>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={closeDrawer}
-              className="p-2"
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto px-3 py-6">
             <div className="space-y-1">
               {navigationItems.map((item) => {
                 const Icon = item.icon
                 const isActive = pathname === item.href
-                
+
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
                     onClick={closeDrawer}
-                    className={`group flex items-center rounded-lg px-3 py-3 text-base font-medium transition-colors ${
+                    className={`group flex items-center rounded-lg px-3 py-3 text-base font-medium transition-all duration-200 ${
                       isActive
-                        ? 'bg-emerald-50 text-emerald-700'
+                        ? 'bg-emerald-50 text-emerald-700 shadow-sm'
                         : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <Icon className={`mr-3 h-6 w-6 ${
+                    <Icon className={`mr-3 h-6 w-6 transition-colors ${
                       isActive ? 'text-emerald-500' : 'text-gray-400 group-hover:text-gray-500'
                     }`} />
-                    {item.label}
+                    <span className="transition-all">{item.label}</span>
                   </Link>
                 )
               })}
@@ -161,13 +134,13 @@ export function MobileDrawer({ user, profile }: MobileDrawerProps) {
                     <Link
                       href="/admin"
                       onClick={closeDrawer}
-                      className={`group flex items-center rounded-lg px-3 py-3 text-base font-medium transition-colors ${
+                      className={`group flex items-center rounded-lg px-3 py-3 text-base font-medium transition-all duration-200 ${
                         pathname.startsWith('/admin')
-                          ? 'bg-amber-50 text-amber-700'
+                          ? 'bg-amber-50 text-amber-700 shadow-sm'
                           : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                       }`}
                     >
-                      <Settings className={`mr-3 h-6 w-6 ${
+                      <Settings className={`mr-3 h-6 w-6 transition-colors ${
                         pathname.startsWith('/admin') ? 'text-amber-500' : 'text-gray-400 group-hover:text-gray-500'
                       }`} />
                       Admin Panel
@@ -180,10 +153,10 @@ export function MobileDrawer({ user, profile }: MobileDrawerProps) {
 
           {/* User Profile */}
           <div className="border-t border-gray-200 px-3 py-4">
-            <Link 
-              href="/profile" 
+            <Link
+              href="/profile"
               onClick={closeDrawer}
-              className="flex items-center rounded-lg px-3 py-3 hover:bg-gray-100"
+              className="flex items-center rounded-lg px-3 py-3 hover:bg-gray-100 transition-colors"
             >
               <Avatar className="h-10 w-10">
                 {profile?.avatar_url ? (
@@ -204,7 +177,7 @@ export function MobileDrawer({ user, profile }: MobileDrawerProps) {
               </div>
               <User className="h-5 w-5 text-gray-400" />
             </Link>
-            
+
             <div className="mt-3 px-3">
               <SignOutButton className="w-full justify-start" />
             </div>

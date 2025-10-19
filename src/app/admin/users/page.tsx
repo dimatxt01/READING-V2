@@ -482,7 +482,8 @@ export default function AdminUsersPage() {
                               alt={user.full_name || 'User'}
                               width={32}
                               height={32}
-                              className="w-8 h-8 rounded-full object-cover"
+                              className="rounded-full object-cover"
+                              style={{ width: '32px', height: '32px' }}
                             />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">

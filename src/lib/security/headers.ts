@@ -45,7 +45,8 @@ export const SecurityHeaders = {
     'base-uri': ["'self'"],
     'form-action': ["'self'"],
     'frame-ancestors': ["'none'"],
-    'upgrade-insecure-requests': [],
+    // Only upgrade to HTTPS in production
+    ...(process.env.NODE_ENV === 'production' ? { 'upgrade-insecure-requests': [] } : {}),
   },
 
   // Generate CSP header string
@@ -60,24 +61,30 @@ export const SecurityHeaders = {
 
   // Security headers for all responses
   getSecurityHeaders(): Record<string, string> {
-    return {
+    const headers: Record<string, string> = {
       // Content Security Policy
       'Content-Security-Policy': this.generateCSP(),
-      
+
       // Prevent MIME type sniffing
       'X-Content-Type-Options': 'nosniff',
-      
+
       // XSS Protection
       'X-XSS-Protection': '1; mode=block',
-      
+
       // Prevent clickjacking
       'X-Frame-Options': 'DENY',
-      
+
       // Referrer Policy
       'Referrer-Policy': 'strict-origin-when-cross-origin',
-      
-      // HSTS (HTTP Strict Transport Security)
-      'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+    }
+
+    // Only add HSTS in production
+    if (process.env.NODE_ENV === 'production') {
+      headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload'
+    }
+
+    return {
+      ...headers,
       
       // Remove server information
       'X-Powered-By': '',

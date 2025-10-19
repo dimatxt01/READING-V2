@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Docker deployment configuration
+  output: 'standalone',
+
   // Performance optimizations
   reactStrictMode: true,
   poweredByHeader: false,

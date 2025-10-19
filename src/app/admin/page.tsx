@@ -33,9 +33,8 @@ export default function AdminDashboard() {
     pendingBooks: 0,
     systemHealth: 'healthy'
   })
-  const [loading, setLoading] = useState(true)
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
-  
+
   const supabase = createClient()
 
   useEffect(() => {
@@ -44,7 +43,6 @@ export default function AdminDashboard() {
   }, [])
 
   const fetchDashboardData = async () => {
-    setLoading(true)
     try {
       // Fetch pending books count
       const { count: pendingBooksCount } = await supabase
@@ -62,8 +60,6 @@ export default function AdminDashboard() {
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
-    } finally {
-      setLoading(false)
     }
   }
 

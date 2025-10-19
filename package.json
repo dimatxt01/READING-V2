@@ -6,7 +6,15 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "docker:build": "docker build -t read-fast-app:latest .",
+    "docker:run": "docker run -d --name read-fast-app -p 3000:3000 --env-file .env.production read-fast-app:latest",
+    "docker:stop": "docker stop read-fast-app && docker rm read-fast-app",
+    "docker:logs": "docker logs -f read-fast-app",
+    "compose:up": "docker-compose up -d",
+    "compose:down": "docker-compose down",
+    "compose:logs": "docker-compose logs -f",
+    "deploy": "./deploy.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
