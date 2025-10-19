@@ -44,13 +44,15 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
 
-EXPOSE 3000
+# Expose both ports for flexibility (Coolify uses 80, Next.js defaults to 3000)
+EXPOSE 80 3000
 
-ENV PORT=3000
+# Use PORT from environment, fallback to 3000
+ENV PORT=${PORT:-3000}
 ENV HOSTNAME="0.0.0.0"
 
-# Add health check
+# Add health check that uses the PORT variable
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {r.statusCode === 200 ? process.exit(0) : process.exit(1)})"
+  CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 3000) + '/api/health', (r) => {r.statusCode === 200 ? process.exit(0) : process.exit(1)})"
 
 CMD ["node", "server.js"]
