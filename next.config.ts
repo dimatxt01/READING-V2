@@ -44,6 +44,8 @@ const nextConfig: NextConfig = {
       '@radix-ui/react-tabs',
       '@radix-ui/react-toast',
     ],
+    // Reduce preload warnings by optimizing resource loading
+    webVitalsAttribution: ['CLS', 'LCP'],
   },
 
   // Headers for caching and security
@@ -73,6 +75,16 @@ const nextConfig: NextConfig = {
           {
             key: 'Cache-Control',
             value: 'public, max-age=86400',
+          },
+        ],
+      },
+      // Optimize font loading to prevent preload warnings
+      {
+        source: '/fonts/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
           },
         ],
       },

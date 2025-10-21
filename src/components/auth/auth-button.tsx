@@ -13,6 +13,7 @@ interface AuthFormProps {
 
 export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
   const { supabase } = useSupabase()
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -40,13 +41,18 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
           window.location.href = `/auth/verify-otp?email=${encodeURIComponent(email)}`
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { error, data } = await supabase.auth.signInWithPassword({
           email,
           password,
         })
 
         if (error) {
           setMessage(error.message)
+        } else if (data?.user) {
+          // Successful login - redirect to dashboard
+          setMessage('Login successful! Redirecting...')
+          router.push('/dashboard')
+          router.refresh() // Force refresh to update authentication state
         }
       }
     } catch (error) {
@@ -144,17 +150,35 @@ interface SignOutButtonProps {
 }
 
 export function SignOutButton({ className }: SignOutButtonProps) {
-  const { supabase } = useSupabase()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
 
   const handleSignOut = async () => {
     setLoading(true)
     try {
-      await supabase.auth.signOut()
-      router.push('/auth/login')
+      // Call the server-side logout endpoint to properly clear session
+      const response = await fetch('/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        // The server will redirect to /auth/login
+        // Force a full page reload to ensure all state is cleared
+        window.location.href = '/auth/login'
+      } else {
+        console.error('Failed to sign out')
+        // Fallback: try client-side navigation
+        router.push('/auth/login')
+        router.refresh()
+      }
     } catch (error) {
       console.error('Error signing out:', error)
+      // Fallback: try client-side navigation
+      router.push('/auth/login')
+      router.refresh()
     } finally {
       setLoading(false)
     }

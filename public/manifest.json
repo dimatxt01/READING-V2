@@ -1,7 +1,7 @@
 {
   "name": "ReadSpeed - Speed Reading Training",
   "short_name": "ReadSpeed",
-  "description": "Master your reading speed with personalized training and assessments",
+  "description": "Master your reading speed with personalized training, assessments, and community challenges",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -12,7 +12,25 @@
     {
       "src": "/icon.svg",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "productivity", "books"],
+  "shortcuts": [
+    {
+      "name": "Start Reading Session",
+      "short_name": "Read",
+      "description": "Quick start a new reading session",
+      "url": "/submit",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Take Assessment",
+      "short_name": "Assess",
+      "description": "Test your reading speed and comprehension",
+      "url": "/assessments",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
     }
   ]
 }

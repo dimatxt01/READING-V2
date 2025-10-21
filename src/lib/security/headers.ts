@@ -35,6 +35,13 @@ export const SecurityHeaders = {
       'https://*.supabase.co',
       'https://supabase.dev.coolifyai.com',
       'wss://*.supabase.co',
+      // Allow localhost connections in development
+      ...(process.env.NODE_ENV === 'development' ? [
+        'http://localhost:*',
+        'http://127.0.0.1:*',
+        'ws://localhost:*',
+        'ws://127.0.0.1:*',
+      ] : []),
     ],
     'frame-src': [
       "'self'",
