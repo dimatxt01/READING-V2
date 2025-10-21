@@ -8,9 +8,11 @@ export const SecurityHeaders = {
     'script-src': [
       "'self'",
       "'unsafe-inline'", // Required for Next.js
-      "'unsafe-eval'", // Required for development
+      // Remove 'unsafe-eval' in production
+      ...(process.env.NODE_ENV === 'development' ? ["'unsafe-eval'"] : []),
       'https://js.stripe.com',
       'https://checkout.stripe.com',
+      'https://supabase.dev.coolifyai.com',
     ],
     'style-src': [
       "'self'",
@@ -35,6 +37,11 @@ export const SecurityHeaders = {
       'https://*.supabase.co',
       'https://supabase.dev.coolifyai.com',
       'wss://*.supabase.co',
+      // Add your production domains
+      'https://r4r.coolifyai.com',
+      'https://www.r4r.coolifyai.com',
+      'https://coolifyai.com',
+      'https://www.coolifyai.com',
       // Allow localhost connections in development
       ...(process.env.NODE_ENV === 'development' ? [
         'http://localhost:*',
@@ -85,6 +92,11 @@ export const SecurityHeaders = {
       'Referrer-Policy': 'strict-origin-when-cross-origin',
     }
 
+    // Add production CORS headers
+    if (process.env.NODE_ENV === 'production') {
+      Object.assign(headers, this.getProductionHeaders())
+    }
+
     // Only add HSTS in production
     if (process.env.NODE_ENV === 'production') {
       headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload'
@@ -123,19 +135,46 @@ export const SecurityHeaders = {
       'Expires': '0',
     }
   },
+
+  // Production-specific headers
+  getProductionHeaders(): Record<string, string> {
+    if (process.env.NODE_ENV !== 'production') {
+      return {}
+    }
+    
+    return {
+      'Access-Control-Allow-Origin': 'https://r4r.coolifyai.com',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, X-CSRF-Token, apikey, x-client-info',
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Max-Age': '86400',
+    }
+  },
 }
 
 // CORS configuration
 export const CORSConfig = {
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://readspeed.app', 'https://www.readspeed.app'] // Replace with your domains
-    : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    ? [
+        'https://r4r.coolifyai.com',
+        'https://www.r4r.coolifyai.com',
+        'https://coolifyai.com',
+        'https://www.coolifyai.com'
+      ]
+    : [
+        'http://localhost:3000', 
+        'http://127.0.0.1:3000',
+        'http://localhost:3002',
+        'http://127.0.0.1:3002'
+      ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
     'Content-Type',
     'Authorization',
     'X-Requested-With',
     'X-CSRF-Token',
+    'apikey',
+    'x-client-info'
   ],
   credentials: true,
   maxAge: 86400, // 24 hours

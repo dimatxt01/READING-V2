@@ -138,7 +138,7 @@ export async function updateSession(request: NextRequest) {
 
             // Only set domain if we're on the coolifyai.com domain
             const hostname = request.headers.get('host') || '';
-            if (isProduction && hostname.includes('coolifyai.com')) {
+            if (isProduction && (hostname.includes('r4r.coolifyai.com') || hostname.includes('coolifyai.com'))) {
               Object.assign(cookieOptions, { domain: '.coolifyai.com' });
             } else if (isProduction) {
               // For other production domains, don't set domain to avoid cookie issues
