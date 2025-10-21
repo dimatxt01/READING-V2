@@ -134,7 +134,10 @@ export async function updateSession(request: NextRequest) {
               Object.assign(cookieOptions, { domain: '.coolifyai.com' });
             }
 
-            supabaseResponse.cookies.set(name, value, cookieOptions);
+            supabaseResponse.cookies.set(name, value, {
+              ...cookieOptions,
+              sameSite: cookieOptions.sameSite as 'none' | 'lax' | 'strict' | undefined
+            });
           })
         },
       }
