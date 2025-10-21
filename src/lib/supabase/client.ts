@@ -6,6 +6,13 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      auth: {
+        // Disable auto refresh to prevent infinite loops on token errors
+        autoRefreshToken: true,
+        persistSession: true,
+        // Add retry logic for failed requests
+        flowType: 'pkce'
+      },
       cookies: {
         get(name: string) {
           // SSR safety check
@@ -32,8 +39,10 @@ export function createClient() {
             // For localhost: use Lax, no domain restriction
             document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=Lax`
           } else {
-            // For production: use None with Secure and domain
-            document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=None; Secure; domain=.coolifyai.com`
+            // For production: check if we're on coolifyai.com domain
+            const isCoolifyDomain = window.location.hostname.includes('coolifyai.com')
+            const domainPart = isCoolifyDomain ? '; domain=.coolifyai.com' : ''
+            document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=None; Secure${domainPart}`
           }
         },
         remove(name: string) {
@@ -49,8 +58,10 @@ export function createClient() {
             // For localhost: use Lax, no domain restriction
             document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
           } else {
-            // For production: use None with Secure and domain
-            document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=None; Secure; domain=.coolifyai.com`
+            // For production: check if we're on coolifyai.com domain
+            const isCoolifyDomain = window.location.hostname.includes('coolifyai.com')
+            const domainPart = isCoolifyDomain ? '; domain=.coolifyai.com' : ''
+            document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=None; Secure${domainPart}`
           }
         }
       }

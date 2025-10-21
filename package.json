@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "validate:env": "node scripts/validate-env.js",
     "docker:build": "docker build -t read-fast-app:latest .",
     "docker:run": "docker run -d --name read-fast-app -p 3000:3000 --env-file .env.production read-fast-app:latest",
     "docker:stop": "docker stop read-fast-app && docker rm read-fast-app",

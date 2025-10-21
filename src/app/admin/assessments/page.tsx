@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState, useEffect, useCallback } from 'react'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -39,13 +39,9 @@ import {
   ChevronLeft,
   ChevronRight,
   MoreHorizontal,
-  Edit,
   Trash2,
-  Eye,
   Calendar,
-  BookOpen,
   Loader2,
-  Download,
   Hash
 } from 'lucide-react'
 import {
@@ -53,7 +49,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { format } from 'date-fns'
@@ -75,8 +70,6 @@ export default function AdminAssessmentsPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all')
-  const [sortBy, setSortBy] = useState<string>('created_at')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [newAssessment, setNewAssessment] = useState({
@@ -90,11 +83,7 @@ export default function AdminAssessmentsPage() {
 
   const itemsPerPage = 10
 
-  useEffect(() => {
-    fetchAssessments()
-  }, [])
-
-  const fetchAssessments = async () => {
+  const fetchAssessments = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch('/api/admin/assessments')
@@ -111,7 +100,11 @@ export default function AdminAssessmentsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    fetchAssessments()
+  }, [fetchAssessments])
 
   const handleCreateAssessment = async () => {
     if (!newAssessment.title || !newAssessment.content) {
@@ -193,15 +186,8 @@ export default function AdminAssessmentsPage() {
   })
 
   const sortedAssessments = [...filteredAssessments].sort((a, b) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const aValue: any = a[sortBy as keyof Assessment]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const bValue: any = b[sortBy as keyof Assessment]
-
-    if (sortOrder === 'asc') {
-      return aValue > bValue ? 1 : -1
-    }
-    return aValue < bValue ? 1 : -1
+    // Sort by created_at in descending order (newest first)
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   })
 
   // Pagination
@@ -423,15 +409,6 @@ export default function AdminAssessmentsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem>
-                            <Eye className="h-4 w-4 mr-2" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-red-600"
                             onClick={() => handleDeleteAssessment(assessment.id)}

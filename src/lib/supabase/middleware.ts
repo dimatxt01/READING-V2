@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { Database } from '../types/database'
 import { logger } from '../utils/logger'
+import { handleAuthError, validateSupabaseConfig } from './auth-error-handler'
 
 // Import security utilities (fallback to no-op if not available)
 interface RateLimitResult {
@@ -62,6 +63,13 @@ async function getSecurityModules() {
 }
 
 export async function updateSession(request: NextRequest) {
+  // Validate Supabase configuration
+  const configValidation = validateSupabaseConfig()
+  if (!configValidation.valid) {
+    logger.error('Invalid Supabase configuration', { missing: configValidation.missing })
+    return NextResponse.redirect(new URL('/auth/login?error=config', request.url))
+  }
+
   // Load security modules lazily
   const { rateLimiters, SecurityHeaders, enforceHTTPS, logSecurityEvent } = await getSecurityModules()
 
@@ -132,6 +140,9 @@ export async function updateSession(request: NextRequest) {
             const hostname = request.headers.get('host') || '';
             if (isProduction && hostname.includes('coolifyai.com')) {
               Object.assign(cookieOptions, { domain: '.coolifyai.com' });
+            } else if (isProduction) {
+              // For other production domains, don't set domain to avoid cookie issues
+              delete cookieOptions.domain;
             }
 
             supabaseResponse.cookies.set(name, value, {
@@ -167,19 +178,41 @@ export async function updateSession(request: NextRequest) {
   try {
     const { data, error } = await supabase.auth.getUser();
     if (error) {
-      logger.error('Failed to get user from Supabase', {
-        error: error.message,
-        pathname: request.nextUrl.pathname
-      });
+      const sessionCleared = await handleAuthError(
+        { message: error.message, status: error.status, code: error.code },
+        supabase,
+        'middleware-getUser'
+      );
+      
+      if (sessionCleared) {
+        logger.info('Session cleared due to auth error, redirecting to login');
+        // Only redirect if we're not already on the login page to prevent loops
+        if (request.nextUrl.pathname !== '/auth/login') {
+          return NextResponse.redirect(new URL('/auth/login?error=session_expired', request.url));
+        }
+      }
     } else {
       user = data?.user;
     }
   } catch (error) {
-    logger.error('Network error connecting to Supabase', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      pathname: request.nextUrl.pathname,
-      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing'
-    });
+    const sessionCleared = await handleAuthError(
+      { 
+        message: error instanceof Error ? error.message : 'Unknown error',
+        status: 0,
+        code: 'network_error'
+      },
+      supabase,
+      'middleware-getUser-catch'
+    );
+    
+    if (sessionCleared) {
+      logger.info('Session cleared due to network error, redirecting to login');
+      // Only redirect if we're not already on the login page to prevent loops
+      if (request.nextUrl.pathname !== '/auth/login') {
+        return NextResponse.redirect(new URL('/auth/login?error=network_error', request.url));
+      }
+    }
+    
     // Continue without user - treat as unauthenticated
   }
 
@@ -244,7 +277,11 @@ export async function updateSession(request: NextRequest) {
   }
 
   // If user is not signed in and the current path is not an auth route or root, redirect to login
-  if (!user && !request.nextUrl.pathname.startsWith('/auth') && request.nextUrl.pathname !== '/') {
+  // BUT: Don't redirect if we're already on the login page with an error parameter (prevents redirect loops)
+  const isLoginPageWithError = request.nextUrl.pathname === '/auth/login' && 
+    (request.nextUrl.searchParams.has('error') || request.nextUrl.searchParams.has('code'))
+  
+  if (!user && !request.nextUrl.pathname.startsWith('/auth') && request.nextUrl.pathname !== '/' && !isLoginPageWithError) {
     logger.debug('Redirecting unauthenticated user to login')
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
