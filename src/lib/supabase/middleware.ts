@@ -63,6 +63,7 @@ async function getSecurityModules() {
 }
 
 // Helper function to determine if we should redirect to login immediately
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function shouldRedirectToLogin(user: any, pathname: string): boolean {
   // If no user and not on auth page, redirect immediately
   if (!user && !pathname.startsWith('/auth') && pathname !== '/') {
