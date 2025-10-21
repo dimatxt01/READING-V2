@@ -1,7 +1,7 @@
 {
   "name": "ReadSpeed - Speed Reading Training",
   "short_name": "ReadSpeed",
-  "description": "Master your reading speed with personalized training, assessments, and community challenges",
+  "description": "Master your reading speed with personalized training and assessments",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -10,92 +10,9 @@
   "scope": "/",
   "icons": [
     {
-      "src": "/icons/icon-72x72.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icons/icon-96x96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icons/icon-128x128.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icons/icon-144x144.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icons/icon-152x152.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icons/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icons/icon-384x384.png",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icons/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable any"
-    }
-  ],
-  "categories": ["education", "productivity", "books"],
-  "shortcuts": [
-    {
-      "name": "Start Reading Session",
-      "short_name": "Read",
-      "description": "Quick start a new reading session",
-      "url": "/submit",
-      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Take Assessment",
-      "short_name": "Assess",
-      "description": "Test your reading speed and comprehension",
-      "url": "/assessments",
-      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Practice Exercises",
-      "short_name": "Practice",
-      "description": "Improve your speed with exercises",
-      "url": "/exercises",
-      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshots/dashboard-mobile.jpg",
-      "sizes": "390x844",
-      "type": "image/jpeg",
-      "form_factor": "narrow",
-      "label": "ReadSpeed Dashboard on mobile"
-    },
-    {
-      "src": "/screenshots/dashboard-desktop.jpg",
-      "sizes": "1920x1080",
-      "type": "image/jpeg",
-      "form_factor": "wide",
-      "label": "ReadSpeed Dashboard on desktop"
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     }
   ]
 }
