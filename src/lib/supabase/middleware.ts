@@ -120,14 +120,22 @@ export async function updateSession(request: NextRequest) {
           supabaseResponse = NextResponse.next({
             request,
           })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            const cookieOptions = {
               ...options,
-              sameSite: isProduction ? 'none' : 'lax',
+              sameSite: isProduction ? 'lax' : 'lax',
               secure: isProduction,
-              ...(isProduction && { domain: '.coolifyai.com' })
-            })
-          )
+              httpOnly: true
+            };
+
+            // Only set domain if we're on the coolifyai.com domain
+            const hostname = request.headers.get('host') || '';
+            if (isProduction && hostname.includes('coolifyai.com')) {
+              Object.assign(cookieOptions, { domain: '.coolifyai.com' });
+            }
+
+            supabaseResponse.cookies.set(name, value, cookieOptions);
+          })
         },
       }
     }
@@ -152,9 +160,25 @@ export async function updateSession(request: NextRequest) {
   // supabase.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let user = null;
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+      logger.error('Failed to get user from Supabase', {
+        error: error.message,
+        pathname: request.nextUrl.pathname
+      });
+    } else {
+      user = data?.user;
+    }
+  } catch (error) {
+    logger.error('Network error connecting to Supabase', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      pathname: request.nextUrl.pathname,
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing'
+    });
+    // Continue without user - treat as unauthenticated
+  }
 
   // Debug logging
   logger.debug('Middleware processing request', {
