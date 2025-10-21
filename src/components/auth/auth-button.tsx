@@ -51,8 +51,27 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
         } else if (data?.user) {
           // Successful login - redirect to dashboard
           setMessage('Login successful! Redirecting...')
-          router.push('/dashboard')
-          router.refresh() // Force refresh to update authentication state
+          
+          // Wait for session to be properly set, then redirect
+          const checkSession = async () => {
+            try {
+              const response = await fetch('/api/auth/session')
+              if (response.ok) {
+                window.location.href = '/dashboard'
+              } else {
+                // Session not ready yet, wait a bit more
+                setTimeout(checkSession, 200)
+              }
+            } catch (error) {
+              // Fallback to direct redirect after delay
+              setTimeout(() => {
+                window.location.href = '/dashboard'
+              }, 1000)
+            }
+          }
+          
+          // Start checking session after a short delay
+          setTimeout(checkSession, 300)
         }
       }
     } catch (error) {

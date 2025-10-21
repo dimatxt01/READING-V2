@@ -307,6 +307,37 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
+  // Special handling for dashboard redirects after login
+  // If we're on dashboard but no user, check if we just came from login
+  if (request.nextUrl.pathname === '/dashboard' && !user) {
+    const referer = request.headers.get('referer')
+    const isFromLogin = referer && referer.includes('/auth/login')
+    
+    if (isFromLogin) {
+      logger.debug('User redirected from login but no session yet, redirecting back to login')
+      return NextResponse.redirect(new URL('/auth/login?error=session_sync', request.url))
+    }
+  }
+
+  // Add a small delay for session sync on protected routes
+  if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
+    // Check if this is a fresh request (no referer) - might be a session sync issue
+    const referer = request.headers.get('referer')
+    if (!referer) {
+      logger.debug('No referer on dashboard request, might be session sync issue')
+      // Give a small delay and try to get user again
+      try {
+        const { data: retryData } = await supabase.auth.getUser()
+        if (retryData?.user) {
+          user = retryData.user
+          logger.debug('Session found on retry')
+        }
+      } catch (retryError) {
+        logger.debug('Retry failed, proceeding with redirect')
+      }
+    }
+  }
+
   // If user is not signed in and the current path is not an auth route or root, redirect to login
   // BUT: Don't redirect if we're already on the login page with an error parameter (prevents redirect loops)
   const isLoginPageWithError = request.nextUrl.pathname === '/auth/login' && 
