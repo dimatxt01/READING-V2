@@ -62,11 +62,32 @@ async function getSecurityModules() {
   return cachedModules
 }
 
+// Helper function to determine if we should redirect to login immediately
+function shouldRedirectToLogin(user: any, pathname: string): boolean {
+  // If no user and not on auth page, redirect immediately
+  if (!user && !pathname.startsWith('/auth') && pathname !== '/') {
+    return true
+  }
+  
+  // If user is on login page, redirect to dashboard
+  if (user && pathname === '/auth/login') {
+    return false // Will redirect to dashboard
+  }
+  
+  return false
+}
+
 export async function updateSession(request: NextRequest) {
   // Validate Supabase configuration
   const configValidation = validateSupabaseConfig()
   if (!configValidation.valid) {
     logger.error('Invalid Supabase configuration', { missing: configValidation.missing })
+    return NextResponse.redirect(new URL('/auth/login?error=config', request.url))
+  }
+
+  // Validate environment variables first
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    logger.error('Missing Supabase configuration')
     return NextResponse.redirect(new URL('/auth/login?error=config', request.url))
   }
 
@@ -118,6 +139,21 @@ export async function updateSession(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      auth: {
+        // Add timeout configuration
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false
+      },
+      global: {
+        fetch: (url, options = {}) => {
+          return fetch(url, {
+            ...options,
+            // Add timeout to prevent long waits
+            signal: AbortSignal.timeout(5000) // 5 second timeout
+          })
+        }
+      },
       cookies: {
         getAll() {
           return request.cookies.getAll()
@@ -195,22 +231,16 @@ export async function updateSession(request: NextRequest) {
       user = data?.user;
     }
   } catch (error) {
-    const sessionCleared = await handleAuthError(
-      { 
-        message: error instanceof Error ? error.message : 'Unknown error',
-        status: 0,
-        code: 'network_error'
-      },
-      supabase,
-      'middleware-getUser-catch'
-    );
+    // Network error - immediately redirect to login without waiting
+    logger.error('Network error connecting to Supabase', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      pathname: request.nextUrl.pathname,
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing'
+    });
     
-    if (sessionCleared) {
-      logger.info('Session cleared due to network error, redirecting to login');
-      // Only redirect if we're not already on the login page to prevent loops
-      if (request.nextUrl.pathname !== '/auth/login') {
-        return NextResponse.redirect(new URL('/auth/login?error=network_error', request.url));
-      }
+    // Immediately redirect to login on network errors
+    if (request.nextUrl.pathname !== '/auth/login') {
+      return NextResponse.redirect(new URL('/auth/login?error=network_error', request.url));
     }
     
     // Continue without user - treat as unauthenticated
@@ -281,7 +311,7 @@ export async function updateSession(request: NextRequest) {
   const isLoginPageWithError = request.nextUrl.pathname === '/auth/login' && 
     (request.nextUrl.searchParams.has('error') || request.nextUrl.searchParams.has('code'))
   
-  if (!user && !request.nextUrl.pathname.startsWith('/auth') && request.nextUrl.pathname !== '/' && !isLoginPageWithError) {
+  if (shouldRedirectToLogin(user, request.nextUrl.pathname) && !isLoginPageWithError) {
     logger.debug('Redirecting unauthenticated user to login')
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }

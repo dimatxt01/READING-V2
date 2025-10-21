@@ -36,8 +36,14 @@ export async function handleAuthError(
     isNetworkError
   })
 
+  // For network errors, immediately return true to trigger redirect
+  if (isNetworkError) {
+    logger.info('Network error detected, clearing session immediately', { context })
+    return true // Immediately trigger redirect
+  }
+
   // If it's a token error, clear the session to prevent infinite loops
-  if (isTokenError || isNetworkError) {
+  if (isTokenError) {
     try {
       logger.info('Clearing invalid session', { context })
       await supabase.auth.signOut()
