@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { AuthForm } from '@/components/auth/auth-button'
+import { ServerAuthForm } from '@/components/auth/server-auth-form'
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
@@ -18,14 +18,14 @@ export default function LoginPage() {
             {mode === 'signin' ? 'Welcome back' : 'Create your account'}
           </h1>
           <p className="mt-2 text-muted-foreground">
-            {mode === 'signin' 
-              ? 'Sign in to your ReadSpeed account' 
+            {mode === 'signin'
+              ? 'Sign in to your ReadSpeed account'
               : 'Join ReadSpeed to track your reading progress'
             }
           </p>
         </div>
-        
-        <AuthForm mode={mode} onToggleMode={toggleMode} />
+
+        <ServerAuthForm mode={mode} onToggleMode={toggleMode} />
       </div>
     </div>
   )

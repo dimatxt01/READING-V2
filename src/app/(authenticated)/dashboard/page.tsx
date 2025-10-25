@@ -1,4 +1,6 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server-simple'
+import { getCurrentUser } from '@/app/actions/auth'
+import { redirect } from 'next/navigation'
 import { StatisticsCards } from '@/components/dashboard/statistics-cards'
 import { CurrentBookWidget } from '@/components/dashboard/current-book-widget'
 import { RecentActivity } from '@/components/dashboard/recent-activity'
@@ -34,17 +36,15 @@ function calculateReadingStreak(submissions: { created_at: string | null }[]): n
 }
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-
-  // Auth check handled by layout - user is guaranteed to exist
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Server-side authentication check
+  const user = await getCurrentUser()
 
   if (!user) {
-    // This should never happen due to layout auth, but satisfies TypeScript
-    throw new Error('Unauthorized')
+    // Redirect to login if not authenticated
+    redirect('/auth/login')
   }
+
+  const supabase = await createClient()
 
   // Get user profile
   const { data: profile } = await supabase

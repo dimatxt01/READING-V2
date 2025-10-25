@@ -1,7 +1,9 @@
-import { updateSession } from '@/lib/supabase/middleware'
+import { updateSession } from '@/lib/supabase/simplified-middleware'
 import { type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  // Use simplified middleware that only refreshes sessions
+  // Routing decisions are made by server components
   return await updateSession(request)
 }
 

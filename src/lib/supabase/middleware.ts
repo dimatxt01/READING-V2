@@ -170,7 +170,7 @@ export async function updateSession(request: NextRequest) {
               ...options,
               sameSite: isProduction ? 'none' : 'lax',
               secure: isProduction,
-              httpOnly: true
+              httpOnly: false  // Changed to false to match client-side cookie behavior
             };
 
             // Only set domain if we're on the coolifyai.com domain
@@ -338,8 +338,22 @@ export async function updateSession(request: NextRequest) {
 
       // Only redirect back to login if all retries failed
       if (!user) {
-        logger.debug('Session sync failed after retries, redirecting to login')
-        return NextResponse.redirect(new URL('/auth/login?error=session_sync', request.url))
+        // Last attempt: try getSession instead of getUser
+        try {
+          const { data: sessionData } = await supabase.auth.getSession()
+          if (sessionData?.session) {
+            user = sessionData.session.user
+            logger.debug('Session recovered via getSession')
+          }
+        } catch (err) {
+          logger.debug('Session recovery via getSession failed')
+        }
+
+        // If still no user after all attempts, redirect to login
+        if (!user) {
+          logger.debug('Session sync failed after all attempts, redirecting to login')
+          return NextResponse.redirect(new URL('/auth/login?error=session_sync', request.url))
+        }
       }
     }
   }
