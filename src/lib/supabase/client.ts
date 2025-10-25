@@ -42,6 +42,7 @@ export function createClient() {
             // For production: check if we're on coolifyai.com domain
             const isCoolifyDomain = window.location.hostname.includes('r4r.coolifyai.com') || window.location.hostname.includes('coolifyai.com')
             const domainPart = isCoolifyDomain ? '; domain=.coolifyai.com' : ''
+            // Use SameSite=None for cross-origin auth with Supabase backend
             document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=None; Secure${domainPart}`
           }
         },
@@ -61,6 +62,7 @@ export function createClient() {
             // For production: check if we're on coolifyai.com domain
             const isCoolifyDomain = window.location.hostname.includes('r4r.coolifyai.com') || window.location.hostname.includes('coolifyai.com')
             const domainPart = isCoolifyDomain ? '; domain=.coolifyai.com' : ''
+            // Use SameSite=None for cross-origin auth with Supabase backend
             document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=None; Secure${domainPart}`
           }
         }

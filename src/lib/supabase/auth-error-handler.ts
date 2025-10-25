@@ -100,7 +100,7 @@ export async function withRetry<T>(
       return await operation()
     } catch (error) {
       lastError = error instanceof Error ? error : new Error('Unknown error')
-      
+
       if (attempt === maxRetries) {
         throw lastError
       }
@@ -117,4 +117,48 @@ export async function withRetry<T>(
   }
 
   throw lastError!
+}
+
+/**
+ * Retry mechanism specifically for token refresh with exponential backoff
+ */
+export async function retryTokenRefresh<T>(
+  refreshFn: () => Promise<T>,
+  retries: number = 3
+): Promise<T> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await refreshFn()
+    } catch (error) {
+      const isLastAttempt = i === retries - 1
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
+      // Don't retry on specific auth errors
+      if (errorMessage.includes('invalid_grant') ||
+          errorMessage.includes('User not found')) {
+        throw error
+      }
+
+      if (isLastAttempt) {
+        logger.error('Token refresh failed after all retries', {
+          attempts: retries,
+          error: errorMessage
+        })
+        throw error
+      }
+
+      // Exponential backoff: 1s, 2s, 4s
+      const backoffTime = Math.pow(2, i) * 1000
+      logger.debug('Token refresh failed, retrying', {
+        attempt: i + 1,
+        maxAttempts: retries,
+        backoffMs: backoffTime,
+        error: errorMessage
+      })
+
+      await new Promise(resolve => setTimeout(resolve, backoffTime))
+    }
+  }
+
+  throw new Error('Token refresh failed after all retries')
 }

@@ -72,3 +72,4 @@ After deployment, verify:
 - [ ] All Supabase operations work
 
 The configuration is now optimized for your production setup with `r4r.coolifyai.com` as the frontend and `supabase.dev.coolifyai.com` as the backend.
+

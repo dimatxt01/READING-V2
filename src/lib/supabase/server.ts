@@ -19,12 +19,15 @@ export const createClient = cache(async () => {
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
               const isProduction = process.env.NODE_ENV === 'production'
-              cookieStore.set(name, value, {
+              const cookieOptions = {
                 ...options,
-                sameSite: isProduction ? 'none' : 'lax',
+                sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
                 secure: isProduction,
+                httpOnly: false, // Allow client-side access for refresh tokens
                 ...(isProduction && { domain: '.coolifyai.com' })
-              })
+              }
+
+              cookieStore.set(name, value, cookieOptions)
             })
           } catch {
             // The `setAll` method was called from a Server Component.

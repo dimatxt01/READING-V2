@@ -73,3 +73,4 @@ Check your logs for:
 - ✅ **No infinite loops** (redirect prevention)
 
 The middleware now handles network errors gracefully and provides immediate redirects for unauthenticated users, eliminating the 15-second delay issue.
+

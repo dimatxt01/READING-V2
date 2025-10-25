@@ -168,9 +168,9 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value, options }) => {
             const cookieOptions = {
               ...options,
-              sameSite: isProduction ? 'lax' : 'lax',
+              sameSite: isProduction ? 'none' : 'lax',
               secure: isProduction,
-              httpOnly: true
+              httpOnly: false
             };
 
             // Only set domain if we're on the coolifyai.com domain
