@@ -141,10 +141,10 @@ export async function updateSession(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {
-        // Add timeout configuration
-        autoRefreshToken: false,
-        persistSession: false,
-        detectSessionInUrl: false
+        // Allow session persistence in middleware
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
       },
       global: {
         fetch: (url, options = {}) => {
@@ -170,7 +170,7 @@ export async function updateSession(request: NextRequest) {
               ...options,
               sameSite: isProduction ? 'none' : 'lax',
               secure: isProduction,
-              httpOnly: false
+              httpOnly: true
             };
 
             // Only set domain if we're on the coolifyai.com domain

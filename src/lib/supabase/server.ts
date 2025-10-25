@@ -23,7 +23,6 @@ export const createClient = cache(async () => {
                 ...options,
                 sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
                 secure: isProduction,
-                httpOnly: false, // Allow client-side access for refresh tokens
                 ...(isProduction && { domain: '.coolifyai.com' })
               }
 
