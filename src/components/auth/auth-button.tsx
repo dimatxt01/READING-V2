@@ -52,13 +52,23 @@ export function AuthForm({ mode, onToggleMode }: AuthFormProps) {
           // Successful login - redirect to dashboard
           setMessage('Login successful! Redirecting...')
 
+          // In production, give more time for cookie synchronization
+          const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+          const redirectDelay = isProduction ? 500 : 100  // More time in production
+
           // Refresh the router to update server-side session state
           router.refresh()
 
-          // Use router.push for client-side navigation with proper session handling
+          // Use window.location for more reliable redirect in production
           setTimeout(() => {
-            router.push('/dashboard')
-          }, 100)
+            if (isProduction) {
+              // Full page navigation ensures cookies are properly set
+              window.location.href = '/dashboard'
+            } else {
+              // Local development can use client-side navigation
+              router.push('/dashboard')
+            }
+          }, redirectDelay)
         }
       }
     } catch (error) {

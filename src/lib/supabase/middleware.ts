@@ -312,10 +312,35 @@ export async function updateSession(request: NextRequest) {
   if (request.nextUrl.pathname === '/dashboard' && !user) {
     const referer = request.headers.get('referer')
     const isFromLogin = referer && referer.includes('/auth/login')
-    
+
     if (isFromLogin) {
-      logger.debug('User redirected from login but no session yet, redirecting back to login')
-      return NextResponse.redirect(new URL('/auth/login?error=session_sync', request.url))
+      // Give the session more time to sync in production
+      logger.debug('User redirected from login, checking session again...')
+
+      // Retry getting the user session with a small delay
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          // Wait a bit between attempts
+          if (attempt > 0) {
+            await new Promise(resolve => setTimeout(resolve, 100 * attempt))
+          }
+
+          const { data: retryData } = await supabase.auth.getUser()
+          if (retryData?.user) {
+            user = retryData.user
+            logger.debug(`Session found on attempt ${attempt + 1}`)
+            break
+          }
+        } catch (retryError) {
+          logger.debug(`Retry attempt ${attempt + 1} failed`)
+        }
+      }
+
+      // Only redirect back to login if all retries failed
+      if (!user) {
+        logger.debug('Session sync failed after retries, redirecting to login')
+        return NextResponse.redirect(new URL('/auth/login?error=session_sync', request.url))
+      }
     }
   }
 
