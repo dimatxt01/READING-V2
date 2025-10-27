@@ -136,8 +136,23 @@ export async function updateSession(request: NextRequest) {
     request,
   })
 
+  // Get the Supabase URL, handling relative proxy URLs
+  const getSupabaseUrl = () => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
+
+    // If it's a relative URL (proxy), convert to absolute URL
+    if (url.startsWith('/')) {
+      // Use the request URL to build the absolute URL
+      const protocol = request.headers.get('x-forwarded-proto') || 'https'
+      const host = request.headers.get('host') || 'placeholder.supabase.co'
+      return `${protocol}://${host}${url}`
+    }
+
+    return url
+  }
+
   const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    getSupabaseUrl(),
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {

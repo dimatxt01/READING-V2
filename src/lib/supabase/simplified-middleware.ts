@@ -4,6 +4,23 @@ import { Database } from '../types/database'
 import { logger } from '../utils/logger'
 
 /**
+ * Get the Supabase URL, handling relative proxy URLs
+ */
+function getSupabaseUrl(request: NextRequest) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
+
+  // If it's a relative URL (proxy), convert to absolute URL
+  if (url.startsWith('/')) {
+    // Use the request URL to build the absolute URL
+    const protocol = request.headers.get('x-forwarded-proto') || 'https'
+    const host = request.headers.get('host') || 'placeholder.supabase.co'
+    return `${protocol}://${host}${url}`
+  }
+
+  return url
+}
+
+/**
  * Simplified middleware that ONLY refreshes sessions
  * Does NOT make routing decisions - those are handled by server components
  */
@@ -18,7 +35,7 @@ export async function updateSession(request: NextRequest) {
   try {
     // Create Supabase client with proper cookie handling
     const supabase = createServerClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      getSupabaseUrl(request),
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
